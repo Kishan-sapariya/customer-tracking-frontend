@@ -1,26 +1,93 @@
 @import "tailwindcss";
 
+/* Class-based dark mode (toggled by ThemeToggle, persisted per user). */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ── ILL CTS theme: cyan / light-blue + white (PRD §8.1) ──────────────────── */
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc; /* slate-50 */
+  --surface: #ffffff;
+  --surface-muted: #f1f5f9; /* slate-100 */
+  --border: #e2e8f0; /* slate-200 */
+  --foreground: #0f172a; /* slate-900 */
+  --muted-foreground: #64748b; /* slate-500 */
+
+  --primary: #0891b2; /* cyan-600 */
+  --primary-hover: #0e7490; /* cyan-700 */
+  --primary-foreground: #ffffff;
+  --primary-subtle: #ecfeff; /* cyan-50 */
+  --primary-subtle-2: #cffafe; /* cyan-100 */
+  --accent: #38bdf8; /* sky-400 */
+
+  --success: #059669; /* emerald-600 */
+  --warning: #d97706; /* amber-600 */
+  --danger: #dc2626; /* red-600 */
+
+  --radius: 0.7rem;
+}
+
+.dark {
+  --background: #020617; /* slate-950 */
+  --surface: #0f172a; /* slate-900 */
+  --surface-muted: #1e293b; /* slate-800 */
+  --border: #1e293b; /* slate-800 */
+  --foreground: #e2e8f0; /* slate-200 */
+  --muted-foreground: #94a3b8; /* slate-400 */
+
+  --primary: #22d3ee; /* cyan-400 */
+  --primary-hover: #06b6d4; /* cyan-500 */
+  --primary-foreground: #042f2e;
+  --primary-subtle: #083344; /* cyan-950 */
+  --primary-subtle-2: #155e75; /* cyan-800 */
+  --accent: #38bdf8;
 }
 
 @theme inline {
   --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-muted: var(--surface-muted);
+  --color-border: var(--border);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-subtle: var(--primary-subtle);
+  --color-primary-subtle-2: var(--primary-subtle-2);
+  --color-accent: var(--accent);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+  --radius-lg: var(--radius);
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+* {
+  border-color: var(--border);
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
 }
+
+/* Thin, themed scrollbars for tables. */
+::-webkit-scrollbar { height: 8px; width: 8px; }
+::-webkit-scrollbar-thumb { background: var(--border); border-radius: 9999px; }
+::-webkit-scrollbar-track { background: transparent; }
+
+/* Subtle entrance for cards/rows. */
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-in { animation: fade-in-up 0.25s ease-out both; }
+
+/* Mobile nav drawer slide-in. */
+@keyframes slide-in-left {
+  from { transform: translateX(-100%); }
+  to { transform: translateX(0); }
+}
+.animate-slide-in { animation: slide-in-left 0.22s ease-out both; }
