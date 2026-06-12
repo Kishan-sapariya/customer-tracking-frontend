@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import {
   Users, Boxes, PackagePlus, Activity, PowerOff, Truck, ReceiptText, IndianRupee, CheckCircle2, HeartPulse,
-  ArrowUpCircle, ArrowDownCircle, RefreshCw, ArrowUp, ArrowDown,
+  ArrowUpCircle, ArrowDownCircle, RefreshCw, ArrowUp, ArrowDown, ArrowRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
@@ -60,6 +60,7 @@ export default function DashboardPage() {
   // reconciles for any period.
   const cmP = data.commercialPeriods[period];
   const totalArc = arc.active - cmP.upgrade.amount + cmP.downgrade.amount + cmP.disconnection.amount;
+  const netChange = arc.active - totalArc; // = upgrades − downgrades − churn for the period
 
   // Rate Revision has no ARC impact (bandwidth-only), so it's excluded from the
   // ARC-impact chart — its count is shown on its card.
@@ -88,15 +89,37 @@ export default function DashboardPage() {
 
       {/* Current ARC — waterfall: total + upgrades − downgrades − disconnections */}
       <Card className="mt-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+        <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
           <div>
             <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-primary">
               <IndianRupee className="h-3.5 w-3.5" /> Current ARC · live book
             </div>
-            <div className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{inr(arc.active)}</div>
+            {/* Start ARC → Current ARC journey for the selected period */}
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
+              <div>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Start ARC</div>
+                <div className="text-lg font-semibold tabular-nums text-muted-foreground">{inr(totalArc)}</div>
+              </div>
+              <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" />
+              <div>
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Current ARC</div>
+                <div className="text-2xl font-semibold tracking-tight tabular-nums">{inr(arc.active)}</div>
+              </div>
+              <span
+                className={cn(
+                  "inline-flex items-center gap-1 self-end rounded-full px-2 py-0.5 text-xs font-medium ring-1 ring-inset",
+                  netChange >= 0
+                    ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400"
+                    : "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-950/40 dark:text-red-400"
+                )}
+              >
+                {netChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+                {inr(Math.abs(netChange))}
+              </span>
+            </div>
           </div>
           {/* period selector */}
-          <div className="inline-flex rounded-lg border border-border p-0.5">
+          <div className="inline-flex shrink-0 rounded-lg border border-border p-0.5">
             {PERIOD_LABELS.map((p) => (
               <button
                 key={p.key}
