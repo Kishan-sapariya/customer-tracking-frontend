@@ -35,6 +35,7 @@ export interface Customer {
   phone: string | null;
   email: string | null;
   city: string | null;
+  username: string | null;
   customerType: CustomerType;
   status: CustomerStatus;
   isActive: boolean;

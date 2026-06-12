@@ -122,6 +122,7 @@ function ActionModal({
   const [bandwidth, setBandwidth] = useState(customer.bandwidth ?? "");
   const [arc, setArc] = useState<string>(customer.arcAmount?.toString() ?? "");
   const [reason, setReason] = useState("");
+  const [effectiveDate, setEffectiveDate] = useState("");
 
   const isPlanChange = action === "UPGRADE" || action === "DOWNGRADE" || action === "RATE_REVISION";
   const titles: Record<ActionType, string> = {
@@ -135,7 +136,11 @@ function ActionModal({
   // Rate Revision changes bandwidth only (ARC unchanged). Upgrade/Downgrade
   // change both bandwidth and ARC.
   const submit = async () => {
-    const body: Record<string, unknown> = { action, reason: reason || undefined };
+    const body: Record<string, unknown> = {
+      action,
+      reason: reason || undefined,
+      effectiveDate: effectiveDate || undefined,
+    };
     if (isPlanChange) {
       body.newBandwidth = bandwidth || undefined;
       if (action !== "RATE_REVISION") body.newArcAmount = arc ? Number(arc) : undefined;
@@ -179,6 +184,12 @@ function ActionModal({
         {action === "RATE_REVISION" && (
           <p className="text-[11px] text-muted-foreground">Rate revision changes bandwidth only — the ARC stays the same.</p>
         )}
+        <Field
+          label={action === "DISCONNECTION" ? "Disconnection date" : "Effective date"}
+          hint="Leave blank to use today"
+        >
+          <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+        </Field>
         <Field label={action === "DISCONNECTION" ? "Reason for disconnection" : "Reason / note"}>
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional note for the history log" />
         </Field>

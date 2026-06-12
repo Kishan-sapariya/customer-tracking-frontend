@@ -10,6 +10,7 @@ export const customerExportColumns: ExportColumn<Customer>[] = [
   { header: "Contact", accessor: (c) => c.contactName },
   { header: "Phone", accessor: (c) => c.phone },
   { header: "Email", accessor: (c) => c.email, width: 24 },
+  { header: "Username", accessor: (c) => c.username },
   { header: "City", accessor: (c) => c.city },
   { header: "Bandwidth", accessor: (c) => c.bandwidth },
   { header: "ARC (INR)", accessor: (c) => c.arcAmount ?? "" },
@@ -54,7 +55,6 @@ export const customerDetailedColumns: ExportColumn<Customer>[] = [
   { header: "Circuit ID", accessor: (c) => d(c).service?.circuitId ?? "" },
   { header: "No. of IPs", accessor: (c) => d(c).service?.numberOfIPs ?? "" },
   { header: "IP Addresses", accessor: (c) => d(c).service?.ipAddresses ?? "" },
-  { header: "Username", accessor: (c) => d(c).service?.username ?? "" },
   { header: "SAM Executive", accessor: (c) => d(c).sam?.samExecutiveName ?? "" },
   // Milestones
   { header: "FTB Amount", accessor: (c) => c.ftbAmount ?? "" },

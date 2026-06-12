@@ -6,7 +6,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { Select, Spinner, EmptyState, Button } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
 import { apiList } from "@/lib/api";
-import { inr, fmtDateTime, ACTION_LABEL } from "@/lib/format";
+import { inr, fmtDate, fmtDateTime, ACTION_LABEL } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -16,7 +16,7 @@ interface ChangeRow {
   id: string;
   action: Action;
   oldValues: { arcAmount?: number; bandwidth?: string } | null;
-  newValues: { arcAmount?: number; bandwidth?: string } | null;
+  newValues: { arcAmount?: number; bandwidth?: string; effectiveDate?: string } | null;
   reason: string | null;
   createdAt: string;
   customer: { id: string; customerCode: string; company: string; arcAmount: number | null };
@@ -39,6 +39,7 @@ const exportColumns = [
   { header: "New ARC", accessor: (r: ChangeRow) => r.newValues?.arcAmount ?? "" },
   { header: "Old Bandwidth", accessor: (r: ChangeRow) => r.oldValues?.bandwidth ?? "" },
   { header: "New Bandwidth", accessor: (r: ChangeRow) => r.newValues?.bandwidth ?? "" },
+  { header: "Effective Date", accessor: (r: ChangeRow) => (r.newValues?.effectiveDate ? new Date(r.newValues.effectiveDate).toLocaleDateString("en-IN") : "") },
   { header: "By", accessor: (r: ChangeRow) => r.performedBy?.name ?? "" },
   { header: "Reason", accessor: (r: ChangeRow) => r.reason ?? "" },
 ];
@@ -198,9 +199,19 @@ function ChangeDetail({ row }: { row: ChangeRow }) {
   const newArc = row.newValues?.arcAmount;
   const oldBw = row.oldValues?.bandwidth;
   const newBw = row.newValues?.bandwidth;
+  const eff = row.newValues?.effectiveDate;
+
+  const effLine = eff ? (
+    <span className="text-muted-foreground">Effective: <span className="text-foreground">{fmtDate(eff)}</span></span>
+  ) : null;
 
   if (row.action === "DISCONNECTION") {
-    return <span className="text-danger">ARC churned: {inr(row.customer.arcAmount)}</span>;
+    return (
+      <div className="flex flex-col gap-0.5">
+        <span className="text-danger">ARC churned: {inr(row.customer.arcAmount)}</span>
+        {effLine}
+      </div>
+    );
   }
 
   return (
@@ -211,6 +222,7 @@ function ChangeDetail({ row }: { row: ChangeRow }) {
       {oldBw && newBw && oldBw !== newBw && (
         <span>BW: <span className="text-muted-foreground">{oldBw}</span> → <span className="font-medium text-foreground">{newBw}</span></span>
       )}
+      {effLine}
     </div>
   );
 }

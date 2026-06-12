@@ -182,6 +182,11 @@ export default function CustomerDetailPage() {
                     ARC {inr((h.oldValues as any)?.arcAmount)} → <span className="text-foreground">{inr((h.newValues as any)?.arcAmount)}</span>
                   </div>
                 )}
+                {(h.newValues as any)?.effectiveDate && (
+                  <div className="mt-0.5 text-[11px] text-muted-foreground">
+                    Effective: <span className="text-foreground">{fmtDate((h.newValues as any).effectiveDate)}</span>
+                  </div>
+                )}
                 {h.reason && <div className="mt-0.5 text-[11px] italic text-muted-foreground">“{h.reason}”</div>}
               </li>
             ))}

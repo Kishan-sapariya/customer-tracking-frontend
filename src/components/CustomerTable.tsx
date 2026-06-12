@@ -122,7 +122,7 @@ export function CustomerTable({
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative min-w-[220px] flex-1">
           <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search company, contact, phone, code…" className="pl-9" />
+          <Input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="Search company, contact, phone, code, username…" className="pl-9" />
         </div>
         {!locked.type && (
           <Select value={type} onChange={(e) => setType(e.target.value)} className="w-auto">
@@ -180,6 +180,7 @@ export function CustomerTable({
               <Th onClick={() => toggleSort("customerCode")} sorted={sortBy === "customerCode"} dir={sortDir}>Code</Th>
               <Th onClick={() => toggleSort("company")} sorted={sortBy === "company"} dir={sortDir}>Company</Th>
               <th className="px-4 py-3 font-medium">Contact</th>
+              <th className="px-4 py-3 font-medium">Username</th>
               <th className="px-4 py-3 font-medium">Plan</th>
               <Th onClick={() => toggleSort("arcAmount")} sorted={sortBy === "arcAmount"} dir={sortDir}>ARC</Th>
               <th className="px-4 py-3 font-medium">Type</th>
@@ -222,6 +223,7 @@ export function CustomerTable({
                       </div>
                     </td>
                     <td className="px-4 py-3 text-muted-foreground">{c.contactName ?? "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.username || "—"}</td>
                     <td className="px-4 py-3">
                       {c.bandwidth ? (
                         <span
@@ -284,6 +286,7 @@ export function CustomerTable({
                         {c.customerCode}
                       </span>
                       {c.contactName && <span>· {c.contactName}</span>}
+                      {c.username && <span className="font-mono">· {c.username}</span>}
                     </div>
                   </div>
                 </div>
