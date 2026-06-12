@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
   Users, Boxes, PackagePlus, Activity, PowerOff, Truck, ReceiptText, IndianRupee, CheckCircle2, HeartPulse,
   ArrowUpCircle, ArrowDownCircle, RefreshCw,
@@ -10,6 +9,7 @@ import { StatCard } from "@/components/StatCard";
 import { Card, Spinner } from "@/components/ui";
 import { apiData } from "@/lib/api";
 import { inr } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { DashboardCounts } from "@/lib/types";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid,
@@ -42,6 +42,10 @@ export default function DashboardPage() {
   const c = data.counts;
   const arc = data.arc;
   const cm = data.commercial;
+  // Original ARC before any plan change. Current total already has upgrades/
+  // downgrades baked in, so we reverse them to get the base: base + upgrades −
+  // downgrades − churned = current active ARC.
+  const baseArc = arc.total - cm.upgrade.amount + cm.downgrade.amount;
 
   // Rate Revision has no ARC impact (bandwidth-only), so it's excluded from the
   // ARC-impact chart — its count is shown on its card.
@@ -68,35 +72,34 @@ export default function DashboardPage() {
         <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" />
       </div>
 
-      {/* Current ARC — net live book after all commercial changes */}
-      <Link
-        href="/customers?active=true"
-        className="animate-in mt-4 flex flex-col gap-4 rounded-xl border border-primary/30 bg-primary-subtle/50 p-5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
-      >
-        <div>
-          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-primary">
-            <IndianRupee className="h-3.5 w-3.5" /> Current ARC · live book
+      {/* Current ARC — full waterfall: base + upgrades − downgrades − disconnections */}
+      <Card className="mt-4">
+        <div className="flex flex-col gap-1 sm:flex-row sm:items-end sm:justify-between">
+          <div>
+            <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-primary">
+              <IndianRupee className="h-3.5 w-3.5" /> Current ARC · live book
+            </div>
+            <div className="mt-1 text-3xl font-semibold tracking-tight tabular-nums">{inr(arc.active)}</div>
           </div>
-          <div className="mt-1.5 text-3xl font-semibold tracking-tight tabular-nums">{inr(arc.active)}</div>
-          <div className="mt-1 text-xs text-muted-foreground">
-            Net recurring revenue after all upgrades, downgrades &amp; disconnections.
-          </div>
+          <p className="text-xs text-muted-foreground">Net recurring revenue after every commercial change.</p>
         </div>
-        <div className="flex gap-6 text-xs sm:gap-8">
-          <div>
-            <div className="text-muted-foreground">Total booked</div>
-            <div className="mt-0.5 text-sm font-semibold tabular-nums">{inr(arc.total)}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">Churned</div>
-            <div className="mt-0.5 text-sm font-semibold tabular-nums text-danger">− {inr(cm.disconnection.amount)}</div>
-          </div>
-          <div>
-            <div className="text-muted-foreground">= Current</div>
-            <div className="mt-0.5 text-sm font-semibold tabular-nums text-primary">{inr(arc.active)}</div>
-          </div>
+
+        {/* waterfall */}
+        <div className="mt-4 flex flex-wrap items-stretch gap-2 text-sm">
+          <WaterSeg label="Booked ARC" note={`${c.total} customers`} value={inr(baseArc)} />
+          <Op>+</Op>
+          <WaterSeg label="Upgrades" note={`${cm.upgrade.count} change${cm.upgrade.count === 1 ? "" : "s"}`} value={inr(cm.upgrade.amount)} tone="success" />
+          <Op>−</Op>
+          <WaterSeg label="Downgrades" note={`${cm.downgrade.count} change${cm.downgrade.count === 1 ? "" : "s"}`} value={inr(cm.downgrade.amount)} tone="warning" />
+          <Op>−</Op>
+          <WaterSeg label="Disconnections" note={`${cm.disconnection.count} churned`} value={inr(cm.disconnection.amount)} tone="danger" />
+          <Op>=</Op>
+          <WaterSeg label="Current ARC" note={`${c.active} active`} value={inr(arc.active)} tone="primary" highlight />
         </div>
-      </Link>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          “Booked ARC” is the original value of every customer before any plan change. Rate revisions change bandwidth only, so they don&apos;t affect ARC.
+        </p>
+      </Card>
 
       {/* Row 2 — commercial changes (count + ARC impact) */}
       <h2 className="mb-3 mt-7 text-sm font-semibold text-muted-foreground">Commercial changes</h2>
@@ -205,4 +208,43 @@ export default function DashboardPage() {
       </div>
     </div>
   );
+}
+
+// One step in the ARC waterfall — label, amount, and a count note.
+function WaterSeg({
+  label,
+  note,
+  value,
+  tone = "default",
+  highlight,
+}: {
+  label: string;
+  note?: string;
+  value: string;
+  tone?: "default" | "success" | "warning" | "danger" | "primary";
+  highlight?: boolean;
+}) {
+  const toneColor: Record<string, string> = {
+    default: "text-foreground",
+    success: "text-emerald-600",
+    warning: "text-amber-600",
+    danger: "text-danger",
+    primary: "text-primary",
+  };
+  return (
+    <div
+      className={cn(
+        "min-w-[130px] flex-1 rounded-lg border px-3 py-2",
+        highlight ? "border-primary/40 bg-primary-subtle/50" : "border-border bg-surface"
+      )}
+    >
+      <div className="text-[10px] font-medium uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className={cn("mt-0.5 text-sm font-semibold tabular-nums", toneColor[tone])}>{value}</div>
+      {note && <div className="text-[10px] text-muted-foreground">{note}</div>}
+    </div>
+  );
+}
+
+function Op({ children }: { children: React.ReactNode }) {
+  return <div className="flex items-center px-0.5 text-lg font-medium text-muted-foreground">{children}</div>;
 }
