@@ -20,7 +20,7 @@ interface Commercial { upgrade: Money; downgrade: Money; rateRevision: Money; di
 type Period = "all" | "q1" | "q2" | "q3" | "q4";
 interface StatsResponse {
   counts: DashboardCounts;
-  arc: { total: number; active: number; old: number; new: number };
+  arc: { total: number; active: number; old: number; new: number; baseTotal: number; baseOld: number; baseNew: number };
   commercial: Commercial;
   commercialPeriods: Record<Period, Commercial>;
   trend: { month: string; count: number }[];
@@ -80,9 +80,9 @@ export default function DashboardPage() {
 
       {/* Row 1 — counts + ARC */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" sub={inr(arc.total)} subLabel="Total ARC" subArrow="up" />
-        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" sub={inr(arc.old)} subLabel="Old ARC" subArrow="up" />
-        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" sub={inr(arc.new)} subLabel="New ARC" subArrow="up" />
+        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" subLabel="Total ARC (start → current)" journey={{ start: inr(arc.baseTotal), current: inr(arc.total) }} />
+        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" subLabel="Old ARC (start → current)" journey={{ start: inr(arc.baseOld), current: inr(arc.old) }} />
+        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" subLabel="New ARC (start → current)" journey={{ start: inr(arc.baseNew), current: inr(arc.new) }} />
         <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" sub={inr(arc.active)} subLabel="Active ARC" subArrow="up" />
         <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" subArrow="down" />
       </div>

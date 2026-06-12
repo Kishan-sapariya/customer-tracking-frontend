@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ArrowUp, ArrowDown, type LucideIcon } from "lucide-react";
+import { ArrowUp, ArrowDown, ArrowRight, type LucideIcon } from "lucide-react";
 
 // Clickable stat card — navigates to the customers list pre-filtered via URL
 // query (shareable/bookmarkable, PRD §5.6 / §8.3). One component, prop-configured.
@@ -15,6 +15,7 @@ export function StatCard({
   sub,
   subLabel,
   subArrow,
+  journey,
 }: {
   label: string;
   value: number | string;
@@ -25,6 +26,7 @@ export function StatCard({
   sub?: string; // a secondary highlighted value (e.g. the ARC figure)
   subLabel?: string; // small caption for the sub value
   subArrow?: "up" | "down"; // directional arrow + color on the sub value
+  journey?: { start: string; current: string }; // start → current ARC view
 }) {
   const router = useRouter();
   const tones: Record<string, string> = {
@@ -52,20 +54,33 @@ export function StatCard({
         </span>
       </div>
       <div className="text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
-      {sub && (
+
+      {/* Start → Current ARC journey */}
+      {journey ? (
         <div className="-mt-1 border-t border-border pt-2">
-          <div
-            className={cn(
-              "flex items-center gap-1 text-sm font-semibold tabular-nums",
-              subArrow === "up" ? "text-emerald-600" : subArrow === "down" ? "text-danger" : "text-primary"
-            )}
-          >
-            {subArrow === "up" && <ArrowUp className="h-3.5 w-3.5" />}
-            {subArrow === "down" && <ArrowDown className="h-3.5 w-3.5" />}
-            {sub}
+          {subLabel && <div className="mb-1 text-[10px] uppercase tracking-wide text-muted-foreground">{subLabel}</div>}
+          <div className="flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="tabular-nums text-muted-foreground">{journey.start}</span>
+            <ArrowRight className="h-3 w-3 shrink-0 text-muted-foreground" />
+            <span className="font-semibold tabular-nums text-emerald-600">{journey.current}</span>
           </div>
-          {subLabel && <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{subLabel}</div>}
         </div>
+      ) : (
+        sub && (
+          <div className="-mt-1 border-t border-border pt-2">
+            <div
+              className={cn(
+                "flex items-center gap-1 text-sm font-semibold tabular-nums",
+                subArrow === "up" ? "text-emerald-600" : subArrow === "down" ? "text-danger" : "text-primary"
+              )}
+            >
+              {subArrow === "up" && <ArrowUp className="h-3.5 w-3.5" />}
+              {subArrow === "down" && <ArrowDown className="h-3.5 w-3.5" />}
+              {sub}
+            </div>
+            {subLabel && <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{subLabel}</div>}
+          </div>
+        )
       )}
       {hint && <span className="text-[11px] text-muted-foreground">{hint}</span>}
     </button>
