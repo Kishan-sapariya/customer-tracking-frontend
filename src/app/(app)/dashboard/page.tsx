@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import {
   Users, Boxes, PackagePlus, Activity, PowerOff, Truck, ReceiptText, IndianRupee, CheckCircle2, HeartPulse,
   ArrowUpCircle, ArrowDownCircle, RefreshCw,
@@ -66,6 +67,36 @@ export default function DashboardPage() {
         <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" sub={inr(arc.active)} subLabel="Active ARC" />
         <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" />
       </div>
+
+      {/* Current ARC — net live book after all commercial changes */}
+      <Link
+        href="/customers?active=true"
+        className="animate-in mt-4 flex flex-col gap-4 rounded-xl border border-primary/30 bg-primary-subtle/50 p-5 transition-all hover:-translate-y-0.5 hover:shadow-md sm:flex-row sm:items-center sm:justify-between"
+      >
+        <div>
+          <div className="flex items-center gap-1.5 text-[11px] font-medium uppercase tracking-wide text-primary">
+            <IndianRupee className="h-3.5 w-3.5" /> Current ARC · live book
+          </div>
+          <div className="mt-1.5 text-3xl font-semibold tracking-tight tabular-nums">{inr(arc.active)}</div>
+          <div className="mt-1 text-xs text-muted-foreground">
+            Net recurring revenue after all upgrades, downgrades &amp; disconnections.
+          </div>
+        </div>
+        <div className="flex gap-6 text-xs sm:gap-8">
+          <div>
+            <div className="text-muted-foreground">Total booked</div>
+            <div className="mt-0.5 text-sm font-semibold tabular-nums">{inr(arc.total)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">Churned</div>
+            <div className="mt-0.5 text-sm font-semibold tabular-nums text-danger">− {inr(cm.disconnection.amount)}</div>
+          </div>
+          <div>
+            <div className="text-muted-foreground">= Current</div>
+            <div className="mt-0.5 text-sm font-semibold tabular-nums text-primary">{inr(arc.active)}</div>
+          </div>
+        </div>
+      </Link>
 
       {/* Row 2 — commercial changes (count + ARC impact) */}
       <h2 className="mb-3 mt-7 text-sm font-semibold text-muted-foreground">Commercial changes</h2>

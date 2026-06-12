@@ -47,7 +47,7 @@ function Brand({ collapsed, onClose }: { collapsed?: boolean; onClose?: () => vo
         </div>
         {!collapsed && (
           <div className="leading-tight">
-            <div className="text-sm font-semibold">ILL CTS</div>
+            <div className="text-sm font-semibold">ILL CCD</div>
             <div className="text-[11px] text-muted-foreground">Customer Tracker</div>
           </div>
         )}
