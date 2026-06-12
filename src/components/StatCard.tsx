@@ -1,7 +1,7 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
-import type { LucideIcon } from "lucide-react";
+import { ArrowUp, ArrowDown, type LucideIcon } from "lucide-react";
 
 // Clickable stat card — navigates to the customers list pre-filtered via URL
 // query (shareable/bookmarkable, PRD §5.6 / §8.3). One component, prop-configured.
@@ -14,6 +14,7 @@ export function StatCard({
   hint,
   sub,
   subLabel,
+  subArrow,
 }: {
   label: string;
   value: number | string;
@@ -23,6 +24,7 @@ export function StatCard({
   hint?: string;
   sub?: string; // a secondary highlighted value (e.g. the ARC figure)
   subLabel?: string; // small caption for the sub value
+  subArrow?: "up" | "down"; // directional arrow + color on the sub value
 }) {
   const router = useRouter();
   const tones: Record<string, string> = {
@@ -52,7 +54,16 @@ export function StatCard({
       <div className="text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
       {sub && (
         <div className="-mt-1 border-t border-border pt-2">
-          <div className="text-sm font-semibold tabular-nums text-primary">{sub}</div>
+          <div
+            className={cn(
+              "flex items-center gap-1 text-sm font-semibold tabular-nums",
+              subArrow === "up" ? "text-emerald-600" : subArrow === "down" ? "text-danger" : "text-primary"
+            )}
+          >
+            {subArrow === "up" && <ArrowUp className="h-3.5 w-3.5" />}
+            {subArrow === "down" && <ArrowDown className="h-3.5 w-3.5" />}
+            {sub}
+          </div>
           {subLabel && <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{subLabel}</div>}
         </div>
       )}

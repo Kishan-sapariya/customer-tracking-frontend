@@ -80,11 +80,11 @@ export default function DashboardPage() {
 
       {/* Row 1 — counts + ARC */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" sub={inr(arc.total)} subLabel="Total ARC" />
-        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" sub={inr(arc.old)} subLabel="Old ARC" />
-        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" sub={inr(arc.new)} subLabel="New ARC" />
-        <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" sub={inr(arc.active)} subLabel="Active ARC" />
-        <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" />
+        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" sub={inr(arc.total)} subLabel="Total ARC" subArrow="up" />
+        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" sub={inr(arc.old)} subLabel="Old ARC" subArrow="up" />
+        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" sub={inr(arc.new)} subLabel="New ARC" subArrow="up" />
+        <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" sub={inr(arc.active)} subLabel="Active ARC" subArrow="up" />
+        <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" subArrow="down" />
       </div>
 
       {/* Current ARC — waterfall: total + upgrades − downgrades − disconnections */}
