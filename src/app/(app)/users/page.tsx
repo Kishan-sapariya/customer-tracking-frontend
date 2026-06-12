@@ -7,6 +7,7 @@ import { InlineError } from "@/components/InlineError";
 import { useActionError } from "@/lib/useActionError";
 import { api, apiList } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
+import { cn } from "@/lib/utils";
 import type { UserRecord } from "@/lib/types";
 
 const ROLE_LABEL: Record<string, string> = { ACCOUNTS: "Accounts", DELIVERY: "Delivery", ADMIN: "Admin", MASTER: "Master" };
@@ -44,47 +45,71 @@ export default function UsersPage() {
         actions={<Button size="sm" onClick={() => setCreating(true)}><UserPlus className="h-4 w-4" /> New user</Button>}
       />
 
-      <Card className="p-0">
+      <div className="overflow-x-auto rounded-xl border border-border bg-surface">
         {loading ? (
           <div className="flex justify-center py-16"><Spinner /></div>
         ) : users.length === 0 ? (
-          <EmptyState title="No users yet" />
+          <EmptyState title="No users yet" hint="Create your first user with “New user”." />
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border text-left text-xs text-muted-foreground">
-                <th className="px-4 py-2.5 font-medium">Name</th>
-                <th className="px-4 py-2.5 font-medium">Email</th>
-                <th className="px-4 py-2.5 font-medium">Role</th>
-                <th className="px-4 py-2.5 font-medium">Status</th>
-                <th className="px-4 py-2.5 font-medium">Created</th>
-                <th className="px-4 py-2.5 text-right font-medium">Actions</th>
+              <tr className="divide-x divide-border border-b border-border bg-surface-muted/50 text-left text-[11px] uppercase tracking-wide text-muted-foreground [&>th]:px-4 [&>th]:py-3 [&>th]:font-medium">
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th className="text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map((u) => (
-                <tr key={u.id} className="border-b border-border last:border-0">
-                  <td className="px-4 py-2.5 font-medium">{u.name}</td>
-                  <td className="px-4 py-2.5 text-muted-foreground">{u.email}</td>
-                  <td className="px-4 py-2.5">{ROLE_LABEL[u.role]}</td>
-                  <td className="px-4 py-2.5">
-                    <span className={u.isActive ? "text-emerald-600" : "text-danger"}>{u.isActive ? "Active" : "Disabled"}</span>
-                  </td>
-                  <td className="px-4 py-2.5 text-xs text-muted-foreground">{fmtDate(u.createdAt)}</td>
-                  <td className="px-4 py-2.5">
-                    <div className="flex justify-end gap-1.5">
-                      <Button variant="ghost" size="sm" onClick={() => setResetting(u)}><KeyRound className="h-3.5 w-3.5" /> Reset</Button>
-                      <Button variant="ghost" size="sm" onClick={() => toggleActive(u)} className={u.isActive ? "text-danger" : "text-emerald-600"}>
-                        <Power className="h-3.5 w-3.5" /> {u.isActive ? "Disable" : "Enable"}
-                      </Button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
+              {users.map((u) => {
+                const initials = u.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+                return (
+                  <tr key={u.id} className="divide-x divide-border border-b border-border last:border-0 transition-colors hover:bg-surface-muted/40">
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-2.5">
+                        <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-primary-subtle text-[11px] font-semibold text-primary">
+                          {initials}
+                        </span>
+                        <span className="font-medium">{u.name}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-muted-foreground">{u.email}</td>
+                    <td className="px-4 py-3">
+                      <span className="inline-flex items-center rounded-md bg-surface-muted px-2 py-0.5 text-[11px] font-medium text-foreground ring-1 ring-inset ring-border">
+                        {ROLE_LABEL[u.role]}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1.5 rounded-full px-2 py-0.5 text-[11px] font-medium ring-1 ring-inset",
+                          u.isActive
+                            ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400"
+                            : "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-950/40 dark:text-red-400"
+                        )}
+                      >
+                        <span className={cn("h-1.5 w-1.5 rounded-full", u.isActive ? "bg-emerald-500" : "bg-red-500")} />
+                        {u.isActive ? "Active" : "Disabled"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3 text-xs text-muted-foreground">{fmtDate(u.createdAt)}</td>
+                    <td className="px-4 py-3">
+                      <div className="flex justify-end gap-1.5">
+                        <Button variant="outline" size="sm" onClick={() => setResetting(u)}><KeyRound className="h-3.5 w-3.5" /> Reset</Button>
+                        <Button variant="outline" size="sm" onClick={() => toggleActive(u)} className={u.isActive ? "text-danger" : "text-emerald-600"}>
+                          <Power className="h-3.5 w-3.5" /> {u.isActive ? "Disable" : "Enable"}
+                        </Button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         )}
-      </Card>
+      </div>
 
       {creating && <CreateUserModal onClose={() => setCreating(false)} onDone={() => { setCreating(false); load(); }} />}
       {resetting && <ResetPasswordModal user={resetting} onClose={() => setResetting(null)} />}
