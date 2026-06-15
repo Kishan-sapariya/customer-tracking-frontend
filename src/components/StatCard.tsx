@@ -15,6 +15,7 @@ export function StatCard({
   sub,
   subLabel,
   subArrow,
+  subTone,
   journey,
 }: {
   label: string;
