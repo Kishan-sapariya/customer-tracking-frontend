@@ -223,7 +223,16 @@ export function CustomerTable({
                         </button>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-muted-foreground">{c.contactName ?? "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">
+                      {c.contactName || c.phone ? (
+                        <div className="flex flex-col leading-tight">
+                          {c.contactName && <span className="text-foreground">{c.contactName}</span>}
+                          {c.phone && <span className="text-[11px]">{c.phone}</span>}
+                        </div>
+                      ) : (
+                        "—"
+                      )}
+                    </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.username || "—"}</td>
                     <td className="px-4 py-3">
                       {c.bandwidth ? (
@@ -287,6 +296,7 @@ export function CustomerTable({
                         {c.customerCode}
                       </span>
                       {c.contactName && <span>· {c.contactName}</span>}
+                      {c.phone && <span>· {c.phone}</span>}
                       {c.username && <span className="font-mono">· {c.username}</span>}
                     </div>
                   </div>
