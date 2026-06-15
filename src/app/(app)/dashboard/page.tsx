@@ -158,10 +158,10 @@ export default function DashboardPage() {
       {/* Row 2 — commercial changes (count + ARC impact) */}
       <h2 className="mb-3 mt-7 text-sm font-semibold text-muted-foreground">Commercial changes</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href="/changes?action=UPGRADE" tone="success" sub={inr(cm.upgrade.amount)} subLabel="ARC gained" />
-        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href="/changes?action=DOWNGRADE" tone="warning" sub={inr(cm.downgrade.amount)} subLabel="ARC reduced" />
+        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href="/changes?action=UPGRADE" tone="success" sub={inr(cm.upgrade.amount)} subLabel="ARC gained" subTone="success" />
+        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href="/changes?action=DOWNGRADE" tone="warning" sub={inr(cm.downgrade.amount)} subLabel="ARC reduced" subTone="warning" />
         <StatCard label="Rate Revisions" value={cm.rateRevision.count} icon={RefreshCw} href="/changes?action=RATE_REVISION" tone="primary" hint="Bandwidth change · no ARC impact" />
-        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" />
+        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" subTone="danger" />
       </div>
 
       {/* Commercial changes chart */}

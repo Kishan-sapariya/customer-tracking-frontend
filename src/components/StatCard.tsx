@@ -26,6 +26,7 @@ export function StatCard({
   sub?: string; // a secondary highlighted value (e.g. the ARC figure)
   subLabel?: string; // small caption for the sub value
   subArrow?: "up" | "down"; // directional arrow + color on the sub value
+  subTone?: "primary" | "success" | "warning" | "danger" | "neutral"; // color the sub value
   journey?: { start: string; current: string }; // start → current ARC view
 }) {
   const router = useRouter();
@@ -35,6 +36,13 @@ export function StatCard({
     warning: "text-amber-600 bg-amber-50 dark:bg-amber-950/40",
     danger: "text-red-600 bg-red-50 dark:bg-red-950/40",
     neutral: "text-slate-500 bg-slate-100 dark:bg-slate-800",
+  };
+  const subTextTones: Record<string, string> = {
+    primary: "text-primary",
+    success: "text-emerald-600",
+    warning: "text-amber-600",
+    danger: "text-danger",
+    neutral: "text-slate-500",
   };
 
   return (
@@ -71,7 +79,13 @@ export function StatCard({
             <div
               className={cn(
                 "flex items-center gap-1 text-sm font-semibold tabular-nums",
-                subArrow === "up" ? "text-emerald-600" : subArrow === "down" ? "text-danger" : "text-primary"
+                subTone
+                  ? subTextTones[subTone]
+                  : subArrow === "up"
+                  ? "text-emerald-600"
+                  : subArrow === "down"
+                  ? "text-danger"
+                  : "text-primary"
               )}
             >
               {subArrow === "up" && <ArrowUp className="h-3.5 w-3.5" />}
