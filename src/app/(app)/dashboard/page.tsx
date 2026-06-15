@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import type { DashboardCounts } from "@/lib/types";
 import {
   XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid,
-  AreaChart, Area, LineChart, Line,
+  AreaChart, Area, BarChart, Bar,
 } from "recharts";
 
 interface Money { count: number; amount: number }
@@ -177,55 +177,69 @@ export default function DashboardPage() {
         <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subTone="danger" />
       </div>
 
-      {/* Commercial changes chart — 3 lines across the fiscal quarters */}
-      <Card className="mt-4">
-        <h3 className="mb-1 text-sm font-semibold">Commercial changes — ARC impact by quarter</h3>
-        <p className="mb-4 text-xs text-muted-foreground">Upgrade, downgrade and disconnection ARC across the fiscal year ({data.fy}).</p>
-        <ResponsiveContainer width="100%" height={260}>
-          <LineChart data={quarterChartData} margin={{ top: 12, right: 16, bottom: 0, left: 8 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="quarter" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
-            <YAxis tickFormatter={compactInr} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={56} axisLine={false} tickLine={false} />
-            <Tooltip
-              cursor={{ stroke: "var(--border)", strokeDasharray: "4 4" }}
-              content={({ active, payload, label }) =>
-                active && payload && payload.length ? (
-                  <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs shadow-md">
-                    <div className="mb-1 font-medium">{label}</div>
-                    {payload.map((p) => (
-                      <div key={p.dataKey as string} className="flex items-center gap-1.5">
-                        <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-                        <span className="text-muted-foreground">{p.name}:</span>
-                        <span className="font-medium text-foreground">{inr(Number(p.value))}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : null
-              }
-            />
-            {COMM_SERIES.map((s) => (
-              <Line
-                key={s.key}
-                type="monotone"
-                dataKey={s.key}
-                name={s.name}
-                stroke={s.color}
-                strokeWidth={2.5}
-                dot={{ r: 3, fill: s.color, strokeWidth: 0 }}
-                activeDot={{ r: 5 }}
+      {/* Commercial changes (bar) + Old vs New split (pie), side by side */}
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        {/* Commercial changes — grouped bar chart by quarter */}
+        <Card>
+          <h3 className="mb-1 text-sm font-semibold">Commercial changes — ARC impact by quarter</h3>
+          <p className="mb-4 text-xs text-muted-foreground">Upgrade, downgrade and disconnection ARC across FY {data.fy}.</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <BarChart data={quarterChartData} margin={{ top: 12, right: 8, bottom: 0, left: 0 }} barGap={2} barCategoryGap="22%">
+              <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
+              <XAxis dataKey="quarter" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+              <YAxis tickFormatter={compactInr} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={48} axisLine={false} tickLine={false} />
+              <Tooltip
+                cursor={{ fill: "var(--surface-muted)" }}
+                content={({ active, payload, label }) =>
+                  active && payload && payload.length ? (
+                    <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs shadow-md">
+                      <div className="mb-1 font-medium">{label}</div>
+                      {payload.map((p) => (
+                        <div key={p.dataKey as string} className="flex items-center gap-1.5">
+                          <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+                          <span className="text-muted-foreground">{p.name}:</span>
+                          <span className="font-medium text-foreground">{inr(Number(p.value))}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : null
+                }
               />
+              {COMM_SERIES.map((s) => (
+                <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[3, 3, 0, 0]} />
+              ))}
+            </BarChart>
+          </ResponsiveContainer>
+          <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs">
+            {COMM_SERIES.map((s) => (
+              <span key={s.key} className="flex items-center gap-1.5">
+                <span className="h-2.5 w-2.5 rounded-sm" style={{ background: s.color }} />
+                {s.name}
+              </span>
             ))}
-          </LineChart>
-        </ResponsiveContainer>
-        <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs">
-          {COMM_SERIES.map((s) => (
-            <span key={s.key} className="flex items-center gap-1.5">
-              <span className="h-2.5 w-4 rounded-full" style={{ background: s.color }} />
-              {s.name}
-            </span>
-          ))}
-        </div>
-      </Card>
+          </div>
+        </Card>
+
+        {/* Old vs New split — donut */}
+        <Card className="flex flex-col">
+          <h3 className="mb-1 text-sm font-semibold">Old vs New split</h3>
+          <p className="mb-4 text-xs text-muted-foreground">Customer mix across the register.</p>
+          <ResponsiveContainer width="100%" height={260}>
+            <PieChart>
+              <Pie data={data.oldVsNew} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} stroke="var(--surface)" strokeWidth={3}>
+                {data.oldVsNew.map((entry, i) => (
+                  <Cell key={i} fill={entry.type === "NEW" ? "#06b6d4" : "#a855f7"} />
+                ))}
+              </Pie>
+              <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+            </PieChart>
+          </ResponsiveContainer>
+          <div className="flex justify-center gap-5 text-xs">
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#06b6d4" }} /> New ({c.new})</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#a855f7" }} /> Old ({c.old})</span>
+          </div>
+        </Card>
+      </div>
 
       {/* Pipeline counts */}
       <h2 className="mb-3 mt-7 text-sm font-semibold text-muted-foreground">New-customer pipeline</h2>
@@ -279,26 +293,6 @@ export default function DashboardPage() {
         </Card>
       </div>
 
-      {/* Old vs New split */}
-      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
-        <Card>
-          <h3 className="mb-3 text-sm font-semibold">Old vs New split</h3>
-          <ResponsiveContainer width="100%" height={180}>
-            <PieChart>
-              <Pie data={data.oldVsNew} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={45} outerRadius={70} paddingAngle={3}>
-                {data.oldVsNew.map((entry, i) => (
-                  <Cell key={i} fill={entry.type === "NEW" ? "var(--primary)" : "#94a3b8"} />
-                ))}
-              </Pie>
-              <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-            </PieChart>
-          </ResponsiveContainer>
-          <div className="flex justify-center gap-4 text-xs">
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-primary" /> New ({c.new})</span>
-            <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full bg-slate-400" /> Old ({c.old})</span>
-          </div>
-        </Card>
-      </div>
     </div>
   );
 }
