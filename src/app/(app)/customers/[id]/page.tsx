@@ -1,15 +1,16 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, type ReactNode } from "react";
 import { useParams } from "next/navigation";
 import { Pencil, FileJson } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Card, Spinner, Button } from "@/components/ui";
 import { StatusBadge, TypeBadge, ActiveBadge } from "@/components/Badges";
+import { Amount } from "@/components/Amount";
 import { PipelineActions } from "@/components/PipelineActions";
 import { ActionMenu } from "@/components/ActionMenu";
 import { EditCustomerModal } from "@/components/EditCustomerModal";
 import { apiData } from "@/lib/api";
-import { inr, fmtDate, fmtDateTime, ACTION_LABEL } from "@/lib/format";
+import { fmtDate, fmtDateTime, ACTION_LABEL } from "@/lib/format";
 import { useAuth, can } from "@/lib/stores";
 import type { Customer } from "@/lib/types";
 
@@ -71,8 +72,8 @@ export default function CustomerDetailPage() {
             <h3 className="mb-3 text-sm font-semibold">Service & Financials</h3>
             <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
               <Detail label="Bandwidth" value={customer.bandwidth} />
-              <Detail label="ARC" value={inr(customer.arcAmount)} />
-              <Detail label="OTC" value={inr(customer.otcAmount)} />
+              <Detail label="ARC" value={<Amount value={customer.arcAmount} />} />
+              <Detail label="OTC" value={<Amount value={customer.otcAmount} />} />
               <Detail label="Billing cycle" value={customer.billingCycle} />
               <Detail label="No. of IPs" value={d.service?.numberOfIPs} />
               <Detail label="IP Addresses" value={d.service?.ipAddresses} />
@@ -137,7 +138,7 @@ export default function CustomerDetailPage() {
               <dl className="grid grid-cols-2 gap-x-6 gap-y-3 text-sm sm:grid-cols-3">
                 <Detail label="Delivery date" value={fmtDate(customer.deliveryDate)} />
                 <Detail label="Delivery notes" value={customer.deliveryNotes} />
-                <Detail label="FTB amount" value={inr(customer.ftbAmount)} />
+                <Detail label="FTB amount" value={<Amount value={customer.ftbAmount} />} />
                 <Detail label="FTB received" value={fmtDate(customer.ftbReceivedDate)} />
               </dl>
             </Card>
@@ -179,7 +180,7 @@ export default function CustomerDetailPage() {
                 </div>
                 {(h.action === "UPGRADE" || h.action === "DOWNGRADE" || h.action === "RATE_REVISION") && (
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    ARC {inr((h.oldValues as any)?.arcAmount)} → <span className="text-foreground">{inr((h.newValues as any)?.arcAmount)}</span>
+                    ARC <Amount value={(h.oldValues as any)?.arcAmount} /> → <span className="text-foreground"><Amount value={(h.newValues as any)?.arcAmount} /></span>
                   </div>
                 )}
                 {(h.newValues as any)?.effectiveDate && (
@@ -199,11 +200,12 @@ export default function CustomerDetailPage() {
   );
 }
 
-function Detail({ label, value }: { label: string; value: unknown }) {
+function Detail({ label, value }: { label: string; value: ReactNode }) {
+  const empty = value === null || value === undefined || value === "";
   return (
     <div>
       <dt className="text-[11px] text-muted-foreground">{label}</dt>
-      <dd className="font-medium">{value === null || value === undefined || value === "" ? "—" : String(value)}</dd>
+      <dd className="font-medium">{empty ? "—" : value}</dd>
     </div>
   );
 }

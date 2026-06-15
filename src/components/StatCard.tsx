@@ -1,4 +1,5 @@
 "use client";
+import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ArrowUp, ArrowDown, ArrowRight, type LucideIcon } from "lucide-react";
@@ -24,11 +25,11 @@ export function StatCard({
   href?: string;
   tone?: "primary" | "success" | "warning" | "danger" | "neutral";
   hint?: string;
-  sub?: string; // a secondary highlighted value (e.g. the ARC figure)
+  sub?: ReactNode; // a secondary highlighted value (e.g. the ARC figure)
   subLabel?: string; // small caption for the sub value
   subArrow?: "up" | "down"; // directional arrow + color on the sub value
   subTone?: "primary" | "success" | "warning" | "danger" | "neutral"; // color the sub value
-  journey?: { start: string; current: string }; // start → current ARC view
+  journey?: { start: ReactNode; current: ReactNode }; // start → current ARC view
 }) {
   const router = useRouter();
   const tones: Record<string, string> = {

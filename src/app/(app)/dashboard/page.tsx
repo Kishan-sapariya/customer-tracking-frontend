@@ -1,18 +1,20 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import {
   Users, Boxes, PackagePlus, Activity, PowerOff, Truck, ReceiptText, IndianRupee, CheckCircle2, HeartPulse,
   ArrowUpCircle, ArrowDownCircle, RefreshCw, ArrowUp, ArrowDown, ArrowRight,
 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
+import { Amount } from "@/components/Amount";
 import { Card, Spinner } from "@/components/ui";
 import { apiData } from "@/lib/api";
-import { inr } from "@/lib/format";
+import { inr, compactInr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { DashboardCounts } from "@/lib/types";
 import {
-  BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid,
+  XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, CartesianGrid,
+  AreaChart, Area, LineChart, Line,
 } from "recharts";
 
 interface Money { count: number; amount: number }
@@ -28,6 +30,12 @@ interface StatsResponse {
   fy: string;
 }
 
+const COMM_SERIES = [
+  { key: "upgrade", name: "Upgrades", color: "#059669" },
+  { key: "downgrade", name: "Downgrades", color: "#d97706" },
+  { key: "disconnection", name: "Disconnections", color: "#dc2626" },
+] as const;
+
 const PERIOD_LABELS: { key: Period; label: string }[] = [
   { key: "all", label: "All time" },
   { key: "q1", label: "Q1" },
@@ -36,8 +44,6 @@ const PERIOD_LABELS: { key: Period; label: string }[] = [
   { key: "q4", label: "Q4" },
 ];
 
-const compactInr = (v: number) =>
-  "₹" + new Intl.NumberFormat("en-IN", { notation: "compact", maximumFractionDigits: 1 }).format(v);
 
 export default function DashboardPage() {
   const [data, setData] = useState<StatsResponse | null>(null);
@@ -62,13 +68,15 @@ export default function DashboardPage() {
   const totalArc = arc.active - cmP.upgrade.amount + cmP.downgrade.amount + cmP.disconnection.amount;
   const netChange = arc.active - totalArc; // = upgrades − downgrades − churn for the period
 
-  // Rate Revision has no ARC impact (bandwidth-only), so it's excluded from the
-  // ARC-impact chart — its count is shown on its card.
-  const commercialData = [
-    { name: "Upgrade", amount: cm.upgrade.amount, count: cm.upgrade.count, fill: "#059669" },
-    { name: "Downgrade", amount: cm.downgrade.amount, count: cm.downgrade.count, fill: "#d97706" },
-    { name: "Disconnection", amount: cm.disconnection.amount, count: cm.disconnection.count, fill: "#dc2626" },
-  ];
+  // Three ARC-impact lines (upgrades / downgrades / disconnections) across the
+  // fiscal quarters. Rate revision is excluded (bandwidth-only, no ARC impact).
+  const cp = data.commercialPeriods;
+  const quarterChartData = (["q1", "q2", "q3", "q4"] as const).map((q, i) => ({
+    quarter: `Q${i + 1}`,
+    upgrade: cp[q].upgrade.amount,
+    downgrade: cp[q].downgrade.amount,
+    disconnection: cp[q].disconnection.amount,
+  }));
 
   return (
     <div>
@@ -80,11 +88,11 @@ export default function DashboardPage() {
 
       {/* Row 1 — counts + ARC */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" subLabel="Total ARC (start → current)" journey={{ start: inr(arc.baseTotal), current: inr(arc.total) }} />
-        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" subLabel="Old ARC (start → current)" journey={{ start: inr(arc.baseOld), current: inr(arc.old) }} />
-        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" subLabel="New ARC (start → current)" journey={{ start: inr(arc.baseNew), current: inr(arc.new) }} />
-        <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" sub={inr(arc.active)} subLabel="Active ARC" subArrow="up" />
-        <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" subArrow="down" />
+        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" subLabel="Total ARC (start → current)" journey={{ start: <Amount value={arc.baseTotal} />, current: <Amount value={arc.total} /> }} />
+        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" subLabel="Old ARC (start → current)" journey={{ start: <Amount value={arc.baseOld} />, current: <Amount value={arc.old} /> }} />
+        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" subLabel="New ARC (start → current)" journey={{ start: <Amount value={arc.baseNew} />, current: <Amount value={arc.new} /> }} />
+        <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" sub={<Amount value={arc.active} />} subLabel="Active ARC" subArrow="up" />
+        <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subArrow="down" />
       </div>
 
       {/* Current ARC — waterfall: total + upgrades − downgrades − disconnections */}
@@ -98,12 +106,12 @@ export default function DashboardPage() {
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               <div>
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Start ARC</div>
-                <div className="text-lg font-semibold tabular-nums text-muted-foreground">{inr(totalArc)}</div>
+                <Amount value={totalArc} className="text-lg font-semibold text-muted-foreground" />
               </div>
               <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" />
               <div>
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Current ARC</div>
-                <div className="text-2xl font-semibold tracking-tight tabular-nums">{inr(arc.active)}</div>
+                <Amount value={arc.active} className="text-2xl font-semibold tracking-tight" />
               </div>
               <span
                 className={cn(
@@ -114,7 +122,7 @@ export default function DashboardPage() {
                 )}
               >
                 {netChange >= 0 ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
-                {inr(Math.abs(netChange))}
+                <Amount value={Math.abs(netChange)} />
               </span>
             </div>
           </div>
@@ -137,15 +145,15 @@ export default function DashboardPage() {
 
         {/* waterfall */}
         <div className="mt-4 flex flex-wrap items-stretch gap-2 text-sm">
-          <WaterSeg label="Total ARC" note={`${c.total} customers`} value={inr(totalArc)} />
+          <WaterSeg label="Total ARC" note={`${c.total} customers`} value={<Amount value={totalArc} />} />
           <Op>+</Op>
-          <WaterSeg label="Upgrades" note={`${cmP.upgrade.count} change${cmP.upgrade.count === 1 ? "" : "s"}`} value={inr(cmP.upgrade.amount)} tone="success" arrow="up" />
+          <WaterSeg label="Upgrades" note={`${cmP.upgrade.count} change${cmP.upgrade.count === 1 ? "" : "s"}`} value={<Amount value={cmP.upgrade.amount} />} tone="success" arrow="up" />
           <Op>−</Op>
-          <WaterSeg label="Downgrades" note={`${cmP.downgrade.count} change${cmP.downgrade.count === 1 ? "" : "s"}`} value={inr(cmP.downgrade.amount)} tone="warning" arrow="down" />
+          <WaterSeg label="Downgrades" note={`${cmP.downgrade.count} change${cmP.downgrade.count === 1 ? "" : "s"}`} value={<Amount value={cmP.downgrade.amount} />} tone="warning" arrow="down" />
           <Op>−</Op>
-          <WaterSeg label="Disconnections" note={`${cmP.disconnection.count} churned`} value={inr(cmP.disconnection.amount)} tone="danger" arrow="down" />
+          <WaterSeg label="Disconnections" note={`${cmP.disconnection.count} churned`} value={<Amount value={cmP.disconnection.amount} />} tone="danger" arrow="down" />
           <Op>=</Op>
-          <WaterSeg label="Current ARC" note={`${c.active} active`} value={inr(arc.active)} tone="primary" highlight />
+          <WaterSeg label="Current ARC" note={`${c.active} active`} value={<Amount value={arc.active} />} tone="primary" highlight />
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
           {period === "all"
@@ -158,45 +166,57 @@ export default function DashboardPage() {
       {/* Row 2 — commercial changes (count + ARC impact) */}
       <h2 className="mb-3 mt-7 text-sm font-semibold text-muted-foreground">Commercial changes</h2>
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href="/changes?action=UPGRADE" tone="success" sub={inr(cm.upgrade.amount)} subLabel="ARC gained" subTone="success" />
-        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href="/changes?action=DOWNGRADE" tone="warning" sub={inr(cm.downgrade.amount)} subLabel="ARC reduced" subTone="warning" />
+        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href="/changes?action=UPGRADE" tone="success" sub={<Amount value={cm.upgrade.amount} />} subLabel="ARC gained" subTone="success" />
+        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href="/changes?action=DOWNGRADE" tone="warning" sub={<Amount value={cm.downgrade.amount} />} subLabel="ARC reduced" subTone="warning" />
         <StatCard label="Rate Revisions" value={cm.rateRevision.count} icon={RefreshCw} href="/changes?action=RATE_REVISION" tone="primary" hint="Bandwidth change · no ARC impact" />
-        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" sub={inr(cm.disconnection.amount)} subLabel="ARC churned" subTone="danger" />
+        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subTone="danger" />
       </div>
 
-      {/* Commercial changes chart */}
+      {/* Commercial changes chart — 3 lines across the fiscal quarters */}
       <Card className="mt-4">
-        <h3 className="mb-1 text-sm font-semibold">Commercial changes — ARC impact</h3>
-        <p className="mb-4 text-xs text-muted-foreground">Monetary impact of each lifecycle action across the register.</p>
-        <ResponsiveContainer width="100%" height={240}>
-          <BarChart data={commercialData} margin={{ top: 8, right: 8, bottom: 0, left: 8 }}>
+        <h3 className="mb-1 text-sm font-semibold">Commercial changes — ARC impact by quarter</h3>
+        <p className="mb-4 text-xs text-muted-foreground">Upgrade, downgrade and disconnection ARC across the fiscal year ({data.fy}).</p>
+        <ResponsiveContainer width="100%" height={260}>
+          <LineChart data={quarterChartData} margin={{ top: 12, right: 16, bottom: 0, left: 8 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} />
-            <YAxis tickFormatter={compactInr} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={56} />
+            <XAxis dataKey="quarter" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+            <YAxis tickFormatter={compactInr} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={56} axisLine={false} tickLine={false} />
             <Tooltip
-              cursor={{ fill: "var(--surface-muted)" }}
+              cursor={{ stroke: "var(--border)", strokeDasharray: "4 4" }}
               content={({ active, payload, label }) =>
                 active && payload && payload.length ? (
                   <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs shadow-md">
-                    <div className="font-medium">{label}</div>
-                    <div className="text-muted-foreground">{(payload[0].payload as any).count} change(s)</div>
-                    <div className="font-semibold text-foreground">{inr((payload[0].payload as any).amount)}</div>
+                    <div className="mb-1 font-medium">{label}</div>
+                    {payload.map((p) => (
+                      <div key={p.dataKey as string} className="flex items-center gap-1.5">
+                        <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
+                        <span className="text-muted-foreground">{p.name}:</span>
+                        <span className="font-medium text-foreground">{inr(Number(p.value))}</span>
+                      </div>
+                    ))}
                   </div>
                 ) : null
               }
             />
-            <Bar dataKey="amount" radius={[4, 4, 0, 0]}>
-              {commercialData.map((d, i) => (
-                <Cell key={i} fill={d.fill} />
-              ))}
-            </Bar>
-          </BarChart>
+            {COMM_SERIES.map((s) => (
+              <Line
+                key={s.key}
+                type="monotone"
+                dataKey={s.key}
+                name={s.name}
+                stroke={s.color}
+                strokeWidth={2.5}
+                dot={{ r: 3, fill: s.color, strokeWidth: 0 }}
+                activeDot={{ r: 5 }}
+              />
+            ))}
+          </LineChart>
         </ResponsiveContainer>
         <div className="mt-3 flex flex-wrap justify-center gap-4 text-xs">
-          {commercialData.map((d) => (
-            <span key={d.name} className="flex items-center gap-1.5">
-              <span className="h-2 w-2 rounded-full" style={{ background: d.fill }} />
-              {d.name} · <span className="font-medium text-foreground">{d.count}</span> · {inr(d.amount)}
+          {COMM_SERIES.map((s) => (
+            <span key={s.key} className="flex items-center gap-1.5">
+              <span className="h-2.5 w-4 rounded-full" style={{ background: s.color }} />
+              {s.name}
             </span>
           ))}
         </div>
@@ -227,14 +247,28 @@ export default function DashboardPage() {
           {data.trend.length === 0 ? (
             <p className="py-8 text-center text-xs text-muted-foreground">No data yet.</p>
           ) : (
-            <ResponsiveContainer width="100%" height={180}>
-              <BarChart data={data.trend}>
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={data.trend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.35} />
+                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
-                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} />
+                <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
+                <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} width={28} />
                 <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
-                <Bar dataKey="count" fill="var(--primary)" radius={[4, 4, 0, 0]} />
-              </BarChart>
+                <Area
+                  type="monotone"
+                  dataKey="count"
+                  stroke="#8b5cf6"
+                  strokeWidth={2.5}
+                  fill="url(#trendFill)"
+                  dot={{ r: 3, fill: "#8b5cf6", strokeWidth: 0 }}
+                  activeDot={{ r: 5 }}
+                />
+              </AreaChart>
             </ResponsiveContainer>
           )}
         </Card>
@@ -275,7 +309,7 @@ function WaterSeg({
 }: {
   label: string;
   note?: string;
-  value: string;
+  value: ReactNode;
   tone?: "default" | "success" | "warning" | "danger" | "primary";
   highlight?: boolean;
   arrow?: "up" | "down";

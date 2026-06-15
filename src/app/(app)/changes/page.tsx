@@ -6,7 +6,8 @@ import { PageHeader } from "@/components/PageHeader";
 import { Select, Spinner, EmptyState, Button } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
 import { apiList } from "@/lib/api";
-import { inr, fmtDate, fmtDateTime, ACTION_LABEL } from "@/lib/format";
+import { fmtDate, fmtDateTime, ACTION_LABEL } from "@/lib/format";
+import { Amount } from "@/components/Amount";
 import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
@@ -222,7 +223,7 @@ function ArcDiff({ row }: { row: ChangeRow }) {
     >
       {d.dir === "up" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
       {d.dir === "up" ? "+" : "−"}
-      {inr(d.amount)}
+      <Amount value={d.amount} />
     </span>
   );
 }
@@ -241,7 +242,7 @@ function ChangeDetail({ row }: { row: ChangeRow }) {
   if (row.action === "DISCONNECTION") {
     return (
       <div className="flex flex-col gap-0.5">
-        <span className="text-danger">ARC churned: {inr(row.customer.arcAmount)}</span>
+        <span className="text-danger">ARC churned: <Amount value={row.customer.arcAmount} /></span>
         {effLine}
       </div>
     );
@@ -250,7 +251,7 @@ function ChangeDetail({ row }: { row: ChangeRow }) {
   return (
     <div className="flex flex-col gap-0.5">
       {oldArc !== undefined && newArc !== undefined && oldArc !== newArc && (
-        <span>ARC: <span className="text-muted-foreground">{inr(oldArc)}</span> → <span className="font-medium text-foreground">{inr(newArc)}</span></span>
+        <span>ARC: <span className="text-muted-foreground"><Amount value={oldArc} /></span> → <span className="font-medium text-foreground"><Amount value={newArc} /></span></span>
       )}
       {oldBw && newBw && oldBw !== newBw && (
         <span>BW: <span className="text-muted-foreground">{oldBw}</span> → <span className="font-medium text-foreground">{newBw}</span></span>

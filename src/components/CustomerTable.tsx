@@ -11,7 +11,8 @@ import { ActionMenu } from "./ActionMenu";
 import { PipelineActions } from "./PipelineActions";
 import { ExportButton } from "./ExportButton";
 import { apiList } from "@/lib/api";
-import { inr, fmtDate } from "@/lib/format";
+import { fmtDate } from "@/lib/format";
+import { Amount } from "./Amount";
 import { cn } from "@/lib/utils";
 import { customerExportColumns, customerDetailedColumns } from "@/lib/customerColumns";
 import { useAuth, can } from "@/lib/stores";
@@ -240,7 +241,7 @@ export function CustomerTable({
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 tabular-nums">{inr(c.arcAmount)}</td>
+                    <td className="px-4 py-3 tabular-nums"><Amount value={c.arcAmount} /></td>
                     <td className="px-4 py-3"><TypeBadge type={c.customerType} /></td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3"><ActiveBadge active={c.isActive} /></td>
@@ -317,7 +318,7 @@ export function CustomerTable({
                   </div>
                   <div>
                     <div className="text-[10px] uppercase tracking-wide text-muted-foreground">ARC</div>
-                    <div className="mt-0.5 font-medium tabular-nums">{inr(c.arcAmount)}</div>
+                    <div className="mt-0.5 font-medium tabular-nums"><Amount value={c.arcAmount} /></div>
                   </div>
                 </div>
 

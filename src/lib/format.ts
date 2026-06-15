@@ -8,6 +8,21 @@ export function inr(value: number | null | undefined): string {
   }).format(value);
 }
 
+// Indian short notation: ₹1.64 Cr / ₹5.73 L / ₹70 K. Click-to-reveal full
+// amount is handled by the <Amount> component.
+export function compactInr(value: number | null | undefined): string {
+  if (value === null || value === undefined) return "—";
+  const neg = value < 0;
+  const v = Math.abs(value);
+  const trim = (n: number) => n.toFixed(2).replace(/\.?0+$/, "");
+  let body: string;
+  if (v >= 1e7) body = `${trim(v / 1e7)} Cr`;
+  else if (v >= 1e5) body = `${trim(v / 1e5)} L`;
+  else if (v >= 1e3) body = `${trim(v / 1e3)} K`;
+  else body = String(Math.round(v));
+  return `${neg ? "-" : ""}₹${body}`;
+}
+
 export function fmtDate(value: string | Date | null | undefined): string {
   if (!value) return "—";
   const d = typeof value === "string" ? new Date(value) : value;
