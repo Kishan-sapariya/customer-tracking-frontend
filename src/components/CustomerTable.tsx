@@ -250,7 +250,7 @@ export function CustomerTable({
                         <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </td>
-                    <td className="px-4 py-3 tabular-nums"><Amount value={c.arcAmount} /></td>
+                    <td className="whitespace-nowrap px-4 py-3 tabular-nums"><Amount value={c.arcAmount} /></td>
                     <td className="px-4 py-3"><TypeBadge type={c.customerType} /></td>
                     <td className="px-4 py-3"><StatusBadge status={c.status} /></td>
                     <td className="px-4 py-3"><ActiveBadge active={c.isActive} /></td>
