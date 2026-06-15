@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useCallback, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUpCircle, ArrowDownCircle, RefreshCw, PowerOff } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, RefreshCw, PowerOff, ArrowUp, ArrowDown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Select, Spinner, EmptyState, Button } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
@@ -37,12 +37,23 @@ const exportColumns = [
   { header: "Action", accessor: (r: ChangeRow) => ACTION_LABEL[r.action] ?? r.action },
   { header: "Old ARC", accessor: (r: ChangeRow) => r.oldValues?.arcAmount ?? "" },
   { header: "New ARC", accessor: (r: ChangeRow) => r.newValues?.arcAmount ?? "" },
+  { header: "ARC Difference", accessor: (r: ChangeRow) => { const d = arcDiff(r); return d ? (d.dir === "up" ? d.amount : -d.amount) : ""; } },
   { header: "Old Bandwidth", accessor: (r: ChangeRow) => r.oldValues?.bandwidth ?? "" },
   { header: "New Bandwidth", accessor: (r: ChangeRow) => r.newValues?.bandwidth ?? "" },
   { header: "Effective Date", accessor: (r: ChangeRow) => (r.newValues?.effectiveDate ? new Date(r.newValues.effectiveDate).toLocaleDateString("en-IN") : "") },
   { header: "By", accessor: (r: ChangeRow) => r.performedBy?.name ?? "" },
-  { header: "Reason", accessor: (r: ChangeRow) => r.reason ?? "" },
 ];
+
+// ARC change for an upgrade/downgrade (null for other actions or no change).
+function arcDiff(row: ChangeRow): { amount: number; dir: "up" | "down" } | null {
+  if (row.action !== "UPGRADE" && row.action !== "DOWNGRADE") return null;
+  const oldArc = row.oldValues?.arcAmount;
+  const newArc = row.newValues?.arcAmount;
+  if (oldArc === undefined || newArc === undefined) return null;
+  const diff = newArc - oldArc;
+  if (diff === 0) return null;
+  return { amount: Math.abs(diff), dir: diff > 0 ? "up" : "down" };
+}
 
 function ChangesInner() {
   const router = useRouter();
@@ -105,8 +116,8 @@ function ChangesInner() {
               <th className="px-4 py-3 font-medium">Customer</th>
               <th className="px-4 py-3 font-medium">Action</th>
               <th className="px-4 py-3 font-medium">Change</th>
+              <th className="px-4 py-3 font-medium">Difference</th>
               <th className="px-4 py-3 font-medium">By</th>
-              <th className="px-4 py-3 font-medium">Reason</th>
             </tr>
           </thead>
           <tbody>
@@ -133,10 +144,10 @@ function ChangesInner() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-xs"><ChangeDetail row={r} /></td>
+                    <td className="px-4 py-3"><ArcDiff row={r} /></td>
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {r.performedBy ? <>{r.performedBy.name}<div className="text-[10px]">{r.performedBy.role}</div></> : "—"}
                     </td>
-                    <td className="px-4 py-3 text-xs text-muted-foreground">{r.reason || "—"}</td>
                   </tr>
                 );
               })
@@ -166,12 +177,14 @@ function ChangesInner() {
                     <Icon className="h-3 w-3" /> {ACTION_LABEL[r.action] ?? r.action}
                   </span>
                 </div>
-                <div className="mt-3 text-xs"><ChangeDetail row={r} /></div>
+                <div className="mt-3 flex items-start justify-between gap-2 text-xs">
+                  <ChangeDetail row={r} />
+                  <ArcDiff row={r} />
+                </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-[11px] text-muted-foreground">
                   <span>{fmtDateTime(r.createdAt)}</span>
                   {r.performedBy && <span>by {r.performedBy.name} · {r.performedBy.role}</span>}
                 </div>
-                {r.reason && <div className="mt-1.5 text-[11px] italic text-muted-foreground">“{r.reason}”</div>}
               </div>
             );
           })
@@ -191,6 +204,26 @@ function ChangesInner() {
         </div>
       )}
     </div>
+  );
+}
+
+// ARC difference badge — green +amount for upgrades, red −amount for downgrades.
+function ArcDiff({ row }: { row: ChangeRow }) {
+  const d = arcDiff(row);
+  if (!d) return <span className="text-xs text-muted-foreground">—</span>;
+  return (
+    <span
+      className={cn(
+        "inline-flex shrink-0 items-center gap-1 rounded-md px-1.5 py-0.5 text-[11px] font-semibold tabular-nums ring-1 ring-inset",
+        d.dir === "up"
+          ? "bg-emerald-50 text-emerald-700 ring-emerald-600/20 dark:bg-emerald-950/40 dark:text-emerald-400"
+          : "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-950/40 dark:text-red-400"
+      )}
+    >
+      {d.dir === "up" ? <ArrowUp className="h-3 w-3" /> : <ArrowDown className="h-3 w-3" />}
+      {d.dir === "up" ? "+" : "−"}
+      {inr(d.amount)}
+    </span>
   );
 }
 
