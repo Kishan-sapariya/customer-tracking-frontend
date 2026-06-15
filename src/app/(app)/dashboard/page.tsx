@@ -60,13 +60,17 @@ export default function DashboardPage() {
   const c = data.counts;
   const arc = data.arc;
   const cm = data.commercial; // all-time, used by the cards/chart below
-  // Period-aware waterfall: reverse the selected period's changes out of the
-  // live active ARC to get the "Total ARC" anchor, so
-  //   Total ARC + upgrades − downgrades − disconnections = Current ARC
-  // reconciles for any period.
+  // Waterfall with a FIXED baseline: the old (legacy) customers' original ARC
+  // never changes as new customers are added. New customers show up as their own
+  // segment, then the commercial changes:
+  //   Old ARC + New ARC + upgrades − downgrades − disconnections = Current ARC
+  // For "all time" this equals the live active ARC (baseOld+baseNew = baseTotal,
+  // and baseTotal + up − down − churn = active).
   const cmP = data.commercialPeriods[period];
-  const totalArc = arc.active - cmP.upgrade.amount + cmP.downgrade.amount + cmP.disconnection.amount;
-  const netChange = arc.active - totalArc; // = upgrades − downgrades − churn for the period
+  const oldStartArc = arc.baseOld; // fixed legacy baseline
+  const newStartArc = arc.baseNew; // new customers' original ARC
+  const currentArc = oldStartArc + newStartArc + cmP.upgrade.amount - cmP.downgrade.amount - cmP.disconnection.amount;
+  const netChange = currentArc - oldStartArc; // growth since the legacy book
 
   // Three ARC-impact lines (upgrades / downgrades / disconnections) across the
   // fiscal quarters. Rate revision is excluded (bandwidth-only, no ARC impact).
@@ -105,13 +109,13 @@ export default function DashboardPage() {
             {/* Start ARC → Current ARC journey for the selected period */}
             <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1">
               <div>
-                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Start ARC</div>
-                <Amount value={totalArc} className="text-lg font-semibold text-muted-foreground" />
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Old ARC (start)</div>
+                <Amount value={oldStartArc} className="text-lg font-semibold text-muted-foreground" />
               </div>
               <ArrowRight className="h-5 w-5 shrink-0 text-muted-foreground" />
               <div>
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Current ARC</div>
-                <Amount value={arc.active} className="text-2xl font-semibold tracking-tight" />
+                <Amount value={currentArc} className="text-2xl font-semibold tracking-tight" />
               </div>
               <span
                 className={cn(
@@ -145,7 +149,9 @@ export default function DashboardPage() {
 
         {/* waterfall */}
         <div className="mt-4 flex flex-wrap items-stretch gap-2 text-sm">
-          <WaterSeg label="Total ARC" note={`${c.total} customers`} value={<Amount value={totalArc} />} />
+          <WaterSeg label="Old ARC" note={`${c.old} old · fixed`} value={<Amount value={oldStartArc} />} />
+          <Op>+</Op>
+          <WaterSeg label="New ARC" note={`${c.new} new`} value={<Amount value={newStartArc} />} tone="primary" arrow="up" />
           <Op>+</Op>
           <WaterSeg label="Upgrades" note={`${cmP.upgrade.count} change${cmP.upgrade.count === 1 ? "" : "s"}`} value={<Amount value={cmP.upgrade.amount} />} tone="success" arrow="up" />
           <Op>−</Op>
@@ -153,12 +159,11 @@ export default function DashboardPage() {
           <Op>−</Op>
           <WaterSeg label="Disconnections" note={`${cmP.disconnection.count} churned`} value={<Amount value={cmP.disconnection.amount} />} tone="danger" arrow="down" />
           <Op>=</Op>
-          <WaterSeg label="Current ARC" note={`${c.active} active`} value={<Amount value={arc.active} />} tone="primary" highlight />
+          <WaterSeg label="Current ARC" note={`${c.active} active`} value={<Amount value={currentArc} />} tone="primary" highlight />
         </div>
         <p className="mt-2 text-[11px] text-muted-foreground">
-          {period === "all"
-            ? "“Total ARC” is the original value of every customer before any plan change."
-            : `Showing commercial changes within ${PERIOD_LABELS.find((p) => p.key === period)?.label} of FY ${data.fy}.`}{" "}
+          “Old ARC” is the legacy customers&apos; original book — a fixed baseline that doesn&apos;t change as new customers are added.
+          {period !== "all" && ` Commercial changes shown for ${PERIOD_LABELS.find((p) => p.key === period)?.label} of FY ${data.fy}.`}{" "}
           Rate revisions change bandwidth only, so they don&apos;t affect ARC.
         </p>
       </Card>
