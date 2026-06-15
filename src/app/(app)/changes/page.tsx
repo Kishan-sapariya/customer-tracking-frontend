@@ -109,7 +109,8 @@ function ChangesInner() {
       </div>
 
       {/* Table (desktop) — scrolls internally with a sticky header */}
-      <div className="hidden max-h-[70vh] overflow-auto rounded-xl border border-border bg-surface md:block">
+      <div className="hidden overflow-hidden rounded-xl border border-border bg-surface md:block">
+        <div className="max-h-[70vh] overflow-auto">
         <table className="w-full text-sm">
           <thead>
             <tr className="divide-x divide-border text-left text-[11px] uppercase tracking-wide text-muted-foreground [&>th]:sticky [&>th]:top-0 [&>th]:z-10 [&>th]:border-b [&>th]:border-border [&>th]:bg-surface-muted">
@@ -155,6 +156,7 @@ function ChangesInner() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Cards (mobile) */}
