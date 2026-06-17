@@ -211,7 +211,7 @@ export default function DashboardPage() {
               <YAxis tickFormatter={compactInr} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={48} axisLine={false} tickLine={false} />
               <Tooltip cursor={{ fill: "var(--surface-muted)" }} content={<ChartTooltip format={inr} />} />
               {COMM_SERIES.map((s) => (
-                <Bar key={s.key} dataKey={s.key} name={s.name} fill={`url(#bar-${s.key})`} radius={[4, 4, 0, 0]} />
+                <Bar key={s.key} dataKey={s.key} name={s.name} fill={`url(#bar-${s.key})`} radius={[4, 4, 0, 0]} animationDuration={800} animationEasing="ease-out" />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -231,7 +231,7 @@ export default function DashboardPage() {
           <p className="mb-4 text-xs text-muted-foreground">Customer mix across the register.</p>
           <ResponsiveContainer width="100%" height={260}>
             <PieChart>
-              <Pie data={data.oldVsNew} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} stroke="var(--surface)" strokeWidth={3}>
+              <Pie data={data.oldVsNew} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} stroke="var(--surface)" strokeWidth={3} animationDuration={800} animationEasing="ease-out">
                 {data.oldVsNew.map((entry, i) => (
                   <Cell key={i} fill={entry.type === "NEW" ? BRAND.cyan : BRAND.sky} />
                 ))}
@@ -293,6 +293,8 @@ export default function DashboardPage() {
                   fill="url(#trendFill)"
                   dot={{ r: 3, fill: BRAND.cyan, strokeWidth: 0 }}
                   activeDot={{ r: 5 }}
+                  animationDuration={900}
+                  animationEasing="ease-out"
                 />
               </AreaChart>
             </ResponsiveContainer>

@@ -3,6 +3,7 @@ import type { ReactNode } from "react";
 import { useRouter } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { ArrowUp, ArrowDown, ArrowRight, type LucideIcon } from "lucide-react";
+import { CountUp } from "./CountUp";
 
 // Clickable stat card — navigates to the customers list pre-filtered via URL
 // query (shareable/bookmarkable, PRD §5.6 / §8.3). One component, prop-configured.
@@ -75,7 +76,9 @@ export function StatCard({
           <Icon className="h-4 w-4" />
         </span>
       </div>
-      <div className="text-2xl font-semibold tracking-tight tabular-nums">{value}</div>
+      <div className="text-2xl font-semibold tracking-tight tabular-nums">
+        {typeof value === "number" ? <CountUp value={value} /> : value}
+      </div>
 
       {/* Start → Current ARC journey */}
       {journey ? (

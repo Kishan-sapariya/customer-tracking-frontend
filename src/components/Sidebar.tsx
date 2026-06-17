@@ -27,16 +27,21 @@ import { ChangePasswordModal } from "./ChangePasswordModal";
 
 const ROLE_LABEL: Record<string, string> = { ACCOUNTS: "Accounts", DELIVERY: "Delivery", ADMIN: "Admin", MASTER: "Master" };
 
+type Caps = ReturnType<typeof can>;
+
 const NAV = [
-  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, show: () => true },
-  { href: "/customers", label: "Customers", icon: Users, show: () => true },
-  { href: "/old-customers", label: "Old Customers", icon: Boxes, show: (c: any) => c.writeCustomers },
-  { href: "/new-customers", label: "New Customers", icon: PackagePlus, show: (c: any) => c.writeCustomers },
-  { href: "/worklist", label: "My Worklist", icon: ListChecks, show: (c: any) => c.setDelivery || c.recordBilling },
-  { href: "/changes", label: "Commercial Changes", icon: ArrowLeftRight, show: (c: any) => c.lifecycle || c.manageUsers },
-  { href: "/users", label: "Users", icon: ShieldCheck, show: (c: any) => c.manageUsers },
-  { href: "/settings", label: "Settings", icon: Settings, show: (c: any) => c.systemSettings },
+  { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "Overview", show: () => true },
+  { href: "/customers", label: "Customers", icon: Users, section: "Overview", show: () => true },
+  { href: "/old-customers", label: "Old Customers", icon: Boxes, section: "Manage", show: (c: Caps) => c.writeCustomers },
+  { href: "/new-customers", label: "New Customers", icon: PackagePlus, section: "Manage", show: (c: Caps) => c.writeCustomers },
+  { href: "/worklist", label: "My Worklist", icon: ListChecks, section: "Manage", show: (c: Caps) => c.setDelivery || c.recordBilling },
+  { href: "/changes", label: "Commercial Changes", icon: ArrowLeftRight, section: "Manage", show: (c: Caps) => c.lifecycle || c.manageUsers },
+  { href: "/users", label: "Users", icon: ShieldCheck, section: "Admin", show: (c: Caps) => c.manageUsers },
+  { href: "/settings", label: "Settings", icon: Settings, section: "Admin", show: (c: Caps) => c.systemSettings },
 ];
+
+// Section order for the grouped nav.
+const SECTIONS = ["Overview", "Manage", "Admin"] as const;
 
 function Brand({ collapsed, onClose }: { collapsed?: boolean; onClose?: () => void }) {
   return (
@@ -65,32 +70,58 @@ function NavList({ collapsed, onNavigate }: { collapsed?: boolean; onNavigate?: 
   const pathname = usePathname();
   const role = useAuth((s) => s.user?.role);
   const caps = can(role);
+
   return (
-    <nav className="flex flex-1 flex-col gap-2 overflow-y-auto px-3 py-1">
-      {NAV.filter((n) => n.show(caps)).map((n) => {
-        const active = pathname === n.href || pathname.startsWith(n.href + "/");
+    <nav className="flex flex-1 flex-col gap-1 overflow-y-auto px-3 py-1">
+      {SECTIONS.map((section, si) => {
+        const items = NAV.filter((n) => n.section === section && n.show(caps));
+        if (items.length === 0) return null;
         return (
-          <Link
-            key={n.href}
-            href={n.href}
-            onClick={onNavigate}
-            title={collapsed ? n.label : undefined}
-            className={cn(
-              "flex items-center rounded-xl border text-sm font-medium transition-all",
-              collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
-              active
-                ? "border-primary/30 bg-primary-subtle text-primary"
-                : "border-border bg-surface text-muted-foreground hover:border-primary/30 hover:bg-surface-muted hover:text-foreground"
+          <div key={section} className={cn(si > 0 && "mt-3")}>
+            {/* Section header (expanded) or a thin divider (collapsed) */}
+            {collapsed ? (
+              si > 0 && <div className="mx-auto mb-2 h-px w-7 bg-border" />
+            ) : (
+              <div className="mb-1 px-3 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground/60">
+                {section}
+              </div>
             )}
-          >
-            <n.icon className={cn("h-4 w-4 shrink-0", active && "text-primary")} />
-            {!collapsed && (
-              <>
-                <span className="flex-1">{n.label}</span>
-                <ChevronRight className={cn("h-4 w-4 shrink-0 opacity-40", active && "opacity-70")} />
-              </>
-            )}
-          </Link>
+            <div className="flex flex-col gap-1">
+              {items.map((n) => {
+                const active = pathname === n.href || pathname.startsWith(n.href + "/");
+                return (
+                  <Link
+                    key={n.href}
+                    href={n.href}
+                    onClick={onNavigate}
+                    title={collapsed ? n.label : undefined}
+                    className={cn(
+                      "group relative flex items-center rounded-lg text-sm font-medium transition-all",
+                      collapsed ? "justify-center px-0 py-2.5" : "gap-3 px-3 py-2.5",
+                      active
+                        ? "bg-primary-subtle text-primary"
+                        : "text-muted-foreground hover:bg-surface-muted hover:text-foreground"
+                    )}
+                  >
+                    {/* left active-accent bar */}
+                    <span
+                      className={cn(
+                        "absolute left-0 top-1/2 h-5 w-1 -translate-y-1/2 rounded-r-full bg-primary transition-all",
+                        active ? "opacity-100" : "opacity-0 group-hover:opacity-40"
+                      )}
+                    />
+                    <n.icon className={cn("h-4 w-4 shrink-0 transition-transform group-hover:scale-110", active && "text-primary")} />
+                    {!collapsed && (
+                      <>
+                        <span className="flex-1">{n.label}</span>
+                        <ChevronRight className={cn("h-4 w-4 shrink-0 opacity-0 transition-opacity", active ? "opacity-60" : "group-hover:opacity-40")} />
+                      </>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
         );
       })}
     </nav>
