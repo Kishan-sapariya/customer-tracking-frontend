@@ -14,7 +14,7 @@ import { apiList } from "@/lib/api";
 import { fmtDate } from "@/lib/format";
 import { Amount } from "./Amount";
 import { cn } from "@/lib/utils";
-import { customerExportColumns, customerDetailedColumns } from "@/lib/customerColumns";
+import { customerDetailedColumns } from "@/lib/customerColumns";
 import { useAuth, can } from "@/lib/stores";
 import type { Customer, Pagination } from "@/lib/types";
 
@@ -61,7 +61,6 @@ export function CustomerTable({
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(25);
-  const [detailed, setDetailed] = useState(false);
 
   const [items, setItems] = useState<Customer[]>([]);
   const [pagination, setPagination] = useState<Pagination | null>(null);
@@ -169,14 +168,10 @@ export function CustomerTable({
             ))}
           </Select>
         )}
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <input type="checkbox" checked={detailed} onChange={(e) => setDetailed(e.target.checked)} className="accent-[var(--primary)]" />
-          Detailed export
-        </label>
         <ExportButton
           currentRows={items}
           fetchAll={fetchAll}
-          columns={detailed ? customerDetailedColumns : customerExportColumns}
+          columns={customerDetailedColumns}
           fileName={fileLabel.replace(/\s+/g, "_")}
           sheetName={fileLabel}
         />
