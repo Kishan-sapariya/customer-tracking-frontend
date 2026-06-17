@@ -11,6 +11,7 @@ export const customerExportColumns: ExportColumn<Customer>[] = [
   { header: "Phone", accessor: (c) => c.phone },
   { header: "Email", accessor: (c) => c.email, width: 24 },
   { header: "Username", accessor: (c) => c.username },
+  { header: "SAM Executive", accessor: (c) => d(c).sam?.samExecutiveName ?? "" },
   { header: "City", accessor: (c) => c.city },
   { header: "Bandwidth", accessor: (c) => c.bandwidth },
   { header: "ARC (INR)", accessor: (c) => c.arcAmount ?? "" },

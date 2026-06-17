@@ -23,6 +23,7 @@ export interface CustomerFilters {
   status?: string;
   active?: "true" | "false";
   needsReview?: "true" | "false";
+  sam?: string;
 }
 
 function bandwidthMbps(bw?: string | null): number | null {
@@ -54,6 +55,8 @@ export function CustomerTable({
   const [type, setType] = useState(initial.type ?? "");
   const [status, setStatus] = useState(initial.status ?? "");
   const [active, setActive] = useState(initial.active ?? "");
+  const [sam, setSam] = useState(initial.sam ?? "");
+  const [samOptions, setSamOptions] = useState<string[]>([]);
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortDir, setSortDir] = useState<"asc" | "desc">("desc");
   const [page, setPage] = useState(1);
@@ -76,13 +79,14 @@ export function CustomerTable({
       status: (locked.status ?? status) || undefined,
       active: (locked.active ?? active) || undefined,
       needsReview: locked.needsReview || undefined,
+      sam: (locked.sam ?? sam) || undefined,
       sortBy,
       sortDir,
       page,
       pageSize,
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [debounced, type, status, active, sortBy, sortDir, page, pageSize, locked.type, locked.status, locked.active, locked.needsReview]
+    [debounced, type, status, active, sam, sortBy, sortDir, page, pageSize, locked.type, locked.status, locked.active, locked.needsReview, locked.sam]
   );
 
   const load = useCallback(async () => {
@@ -102,7 +106,15 @@ export function CustomerTable({
 
   useEffect(() => {
     setPage(1);
-  }, [debounced, type, status, active, pageSize]);
+  }, [debounced, type, status, active, sam, pageSize]);
+
+  // Load distinct SAM names once for the filter dropdown (skipped when locked).
+  useEffect(() => {
+    if (locked.sam) return;
+    apiList<string>("/customers/sams")
+      .then((res) => setSamOptions(res.items ?? []))
+      .catch(() => setSamOptions([]));
+  }, [locked.sam]);
 
   const toggleSort = (key: string) => {
     if (sortBy === key) setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -149,6 +161,14 @@ export function CustomerTable({
             <option value="false">Deactive only</option>
           </Select>
         )}
+        {!locked.sam && (
+          <Select value={sam} onChange={(e) => setSam(e.target.value)} className="w-auto">
+            <option value="">All SAMs</option>
+            {samOptions.map((name) => (
+              <option key={name} value={name}>{name}</option>
+            ))}
+          </Select>
+        )}
         <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
           <input type="checkbox" checked={detailed} onChange={(e) => setDetailed(e.target.checked)} className="accent-[var(--primary)]" />
           Detailed export
@@ -184,6 +204,7 @@ export function CustomerTable({
               <Th onClick={() => toggleSort("company")} sorted={sortBy === "company"} dir={sortDir}>Company</Th>
               <th className="px-4 py-3 font-medium">Contact</th>
               <th className="px-4 py-3 font-medium">Username</th>
+              <th className="px-4 py-3 font-medium">SAM</th>
               <th className="px-4 py-3 font-medium">Plan</th>
               <Th onClick={() => toggleSort("arcAmount")} sorted={sortBy === "arcAmount"} dir={sortDir}>ARC</Th>
               <th className="px-4 py-3 font-medium">Type</th>
@@ -196,13 +217,13 @@ export function CustomerTable({
           <tbody>
             {loading ? (
               <tr>
-                <td colSpan={11} className="py-16">
+                <td colSpan={showActions ? 12 : 11} className="py-16">
                   <div className="flex justify-center"><Spinner /></div>
                 </td>
               </tr>
             ) : items.length === 0 ? (
               <tr>
-                <td colSpan={11}><EmptyState title="No customers found" hint="Try adjusting your filters or search." /></td>
+                <td colSpan={showActions ? 12 : 11}><EmptyState title="No customers found" hint="Try adjusting your filters or search." /></td>
               </tr>
             ) : (
               items.map((c) => {
@@ -236,6 +257,7 @@ export function CustomerTable({
                       )}
                     </td>
                     <td className="px-4 py-3 font-mono text-xs text-muted-foreground">{c.username || "—"}</td>
+                    <td className="px-4 py-3 text-muted-foreground">{c.details?.sam?.samExecutiveName || "—"}</td>
                     <td className="px-4 py-3">
                       {c.bandwidth ? (
                         <span
@@ -301,6 +323,7 @@ export function CustomerTable({
                       {c.contactName && <span>· {c.contactName}</span>}
                       {c.phone && <span>· {c.phone}</span>}
                       {c.username && <span className="font-mono">· {c.username}</span>}
+                      {c.details?.sam?.samExecutiveName && <span>· SAM: {c.details.sam.samExecutiveName}</span>}
                     </div>
                   </div>
                 </div>

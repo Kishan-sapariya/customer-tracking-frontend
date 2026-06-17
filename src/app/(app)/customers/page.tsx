@@ -11,6 +11,7 @@ function CustomersInner() {
     type: (sp.get("type") as "OLD" | "NEW") || undefined,
     status: sp.get("status") || undefined,
     active: (sp.get("active") as "true" | "false") || undefined,
+    sam: sp.get("sam") || undefined,
     search: sp.get("search") || undefined,
   };
 
