@@ -7,7 +7,7 @@ import {
 import { PageHeader } from "@/components/PageHeader";
 import { StatCard } from "@/components/StatCard";
 import { Amount } from "@/components/Amount";
-import { Card, Spinner } from "@/components/ui";
+import { Card } from "@/components/ui";
 import { apiData } from "@/lib/api";
 import { inr, compactInr } from "@/lib/format";
 import { cn } from "@/lib/utils";
@@ -31,10 +31,18 @@ interface StatsResponse {
 }
 
 const COMM_SERIES = [
-  { key: "upgrade", name: "Upgrades", color: "#059669" },
-  { key: "downgrade", name: "Downgrades", color: "#d97706" },
-  { key: "disconnection", name: "Disconnections", color: "#dc2626" },
+  { key: "upgrade", name: "Upgrades", color: "#059669" }, // emerald-600
+  { key: "downgrade", name: "Downgrades", color: "#f59e0b" }, // amber-500
+  { key: "disconnection", name: "Disconnections", color: "#ef4444" }, // red-500
 ] as const;
+
+// On-brand chart palette (cyan / sky) so charts read as part of the theme.
+const BRAND = { cyan: "#06b6d4", sky: "#38bdf8" } as const;
+
+// Vivid, varied palette for the stat-card top bars. Rotated per card so two
+// neighbours never share a color (the icon badge still carries the semantics).
+const ACCENTS = ["#3b82f6", "#eab308", "#ef4444", "#22c55e", "#8b5cf6", "#06b6d4"] as const; // blue·yellow·red·green·violet·cyan
+const ac = (i: number) => ACCENTS[i % ACCENTS.length];
 
 const PERIOD_LABELS: { key: Period; label: string }[] = [
   { key: "all", label: "All time" },
@@ -54,7 +62,7 @@ export default function DashboardPage() {
   }, []);
 
   if (!data) {
-    return <div className="flex justify-center py-24"><Spinner className="h-6 w-6" /></div>;
+    return <DashboardSkeleton />;
   }
 
   const c = data.counts;
@@ -87,16 +95,21 @@ export default function DashboardPage() {
       <PageHeader
         title="Dashboard"
         crumbs={[{ label: "Dashboard" }]}
-        description={`The customer register at a glance · FY ${data.fy}. Click any card to drill into the list.`}
+        description="The customer register at a glance. Click any card to drill into the list."
+        badge={
+          <span className="rounded-full bg-primary-subtle px-2.5 py-0.5 text-xs font-medium text-primary ring-1 ring-inset ring-primary/20">
+            FY {data.fy}
+          </span>
+        }
       />
 
       {/* Row 1 — counts + ARC */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" subLabel="Total ARC (start → current)" journey={{ start: <Amount value={arc.baseTotal} />, current: <Amount value={arc.total} /> }} />
-        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" subLabel="Old ARC (start → current)" journey={{ start: <Amount value={arc.baseOld} />, current: <Amount value={arc.old} /> }} />
-        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" subLabel="New ARC (start → current)" journey={{ start: <Amount value={arc.baseNew} />, current: <Amount value={arc.new} /> }} />
-        <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" sub={<Amount value={arc.active} />} subLabel="Active ARC" subArrow="up" />
-        <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subArrow="down" />
+      <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" accent={ac(0)} subLabel="Total ARC (start → current)" journey={{ start: <Amount value={arc.baseTotal} />, current: <Amount value={arc.total} /> }} />
+        <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" accent={ac(1)} subLabel="Old ARC (start → current)" journey={{ start: <Amount value={arc.baseOld} />, current: <Amount value={arc.old} /> }} />
+        <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" accent={ac(2)} subLabel="New ARC (start → current)" journey={{ start: <Amount value={arc.baseNew} />, current: <Amount value={arc.new} /> }} />
+        <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" accent={ac(3)} sub={<Amount value={arc.active} />} subLabel="Active ARC" subArrow="up" />
+        <StatCard label="Deactive" value={c.disconnected} icon={PowerOff} href="/customers?status=DISCONNECTED" tone="danger" accent={ac(4)} sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subArrow="down" />
       </div>
 
       {/* Current ARC — waterfall: total + upgrades − downgrades − disconnections */}
@@ -169,12 +182,12 @@ export default function DashboardPage() {
       </Card>
 
       {/* Row 2 — commercial changes (count + ARC impact) */}
-      <h2 className="mb-3 mt-7 text-sm font-semibold text-muted-foreground">Commercial changes</h2>
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href="/changes?action=UPGRADE" tone="success" sub={<Amount value={cm.upgrade.amount} />} subLabel="ARC gained" subTone="success" />
-        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href="/changes?action=DOWNGRADE" tone="warning" sub={<Amount value={cm.downgrade.amount} />} subLabel="ARC reduced" subTone="warning" />
-        <StatCard label="Rate Revisions" value={cm.rateRevision.count} icon={RefreshCw} href="/changes?action=RATE_REVISION" tone="primary" hint="Bandwidth change · no ARC impact" />
-        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subTone="danger" />
+      <SectionHeading>Commercial changes</SectionHeading>
+      <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href="/changes?action=UPGRADE" tone="success" accent={ac(2)} sub={<Amount value={cm.upgrade.amount} />} subLabel="ARC gained" subTone="success" />
+        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href="/changes?action=DOWNGRADE" tone="warning" accent={ac(3)} sub={<Amount value={cm.downgrade.amount} />} subLabel="ARC reduced" subTone="warning" />
+        <StatCard label="Rate Revisions" value={cm.rateRevision.count} icon={RefreshCw} href="/changes?action=RATE_REVISION" tone="primary" accent={ac(4)} hint="Bandwidth change · no ARC impact" />
+        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" accent={ac(0)} sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subTone="danger" />
       </div>
 
       {/* Commercial changes (bar) + Old vs New split (pie), side by side */}
@@ -185,28 +198,20 @@ export default function DashboardPage() {
           <p className="mb-4 text-xs text-muted-foreground">Upgrade, downgrade and disconnection ARC across FY {data.fy}.</p>
           <ResponsiveContainer width="100%" height={260}>
             <BarChart data={quarterChartData} margin={{ top: 12, right: 8, bottom: 0, left: 0 }} barGap={2} barCategoryGap="22%">
+              <defs>
+                {COMM_SERIES.map((s) => (
+                  <linearGradient key={s.key} id={`bar-${s.key}`} x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor={s.color} stopOpacity={0.95} />
+                    <stop offset="100%" stopColor={s.color} stopOpacity={0.6} />
+                  </linearGradient>
+                ))}
+              </defs>
               <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
               <XAxis dataKey="quarter" tick={{ fontSize: 12, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
               <YAxis tickFormatter={compactInr} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} width={48} axisLine={false} tickLine={false} />
-              <Tooltip
-                cursor={{ fill: "var(--surface-muted)" }}
-                content={({ active, payload, label }) =>
-                  active && payload && payload.length ? (
-                    <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs shadow-md">
-                      <div className="mb-1 font-medium">{label}</div>
-                      {payload.map((p) => (
-                        <div key={p.dataKey as string} className="flex items-center gap-1.5">
-                          <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />
-                          <span className="text-muted-foreground">{p.name}:</span>
-                          <span className="font-medium text-foreground">{inr(Number(p.value))}</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : null
-                }
-              />
+              <Tooltip cursor={{ fill: "var(--surface-muted)" }} content={<ChartTooltip format={inr} />} />
               {COMM_SERIES.map((s) => (
-                <Bar key={s.key} dataKey={s.key} name={s.name} fill={s.color} radius={[3, 3, 0, 0]} />
+                <Bar key={s.key} dataKey={s.key} name={s.name} fill={`url(#bar-${s.key})`} radius={[4, 4, 0, 0]} />
               ))}
             </BarChart>
           </ResponsiveContainer>
@@ -228,26 +233,26 @@ export default function DashboardPage() {
             <PieChart>
               <Pie data={data.oldVsNew} dataKey="count" nameKey="type" cx="50%" cy="50%" innerRadius={60} outerRadius={95} paddingAngle={3} stroke="var(--surface)" strokeWidth={3}>
                 {data.oldVsNew.map((entry, i) => (
-                  <Cell key={i} fill={entry.type === "NEW" ? "#06b6d4" : "#a855f7"} />
+                  <Cell key={i} fill={entry.type === "NEW" ? BRAND.cyan : BRAND.sky} />
                 ))}
               </Pie>
-              <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+              <Tooltip content={<ChartTooltip />} />
             </PieChart>
           </ResponsiveContainer>
           <div className="flex justify-center gap-5 text-xs">
-            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#06b6d4" }} /> New ({c.new})</span>
-            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: "#a855f7" }} /> Old ({c.old})</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: BRAND.cyan }} /> New ({c.new})</span>
+            <span className="flex items-center gap-1.5"><span className="h-2.5 w-2.5 rounded-full" style={{ background: BRAND.sky }} /> Old ({c.old})</span>
           </div>
         </Card>
       </div>
 
       {/* Pipeline counts */}
-      <h2 className="mb-3 mt-7 text-sm font-semibold text-muted-foreground">New-customer pipeline</h2>
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <StatCard label="Delivery Pending" value={c.deliveryPending} icon={Truck} href="/customers?type=NEW&status=DELIVERY_PENDING" tone="warning" />
-        <StatCard label="Billing Pending" value={c.billingPending} icon={ReceiptText} href="/customers?type=NEW&status=BILLING_PENDING" tone="warning" />
-        <StatCard label="FTB Pending" value={c.ftbPending} icon={IndianRupee} href="/customers?type=NEW&status=FTB_PENDING" tone="warning" />
-        <StatCard label="Completed" value={c.completed} icon={CheckCircle2} href="/customers?status=COMPLETED" tone="success" />
+      <SectionHeading>New-customer pipeline</SectionHeading>
+      <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-4">
+        <StatCard label="Delivery Pending" value={c.deliveryPending} icon={Truck} href="/customers?type=NEW&status=DELIVERY_PENDING" tone="warning" accent={ac(1)} />
+        <StatCard label="Billing Pending" value={c.billingPending} icon={ReceiptText} href="/customers?type=NEW&status=BILLING_PENDING" tone="warning" accent={ac(2)} />
+        <StatCard label="FTB Pending" value={c.ftbPending} icon={IndianRupee} href="/customers?type=NEW&status=FTB_PENDING" tone="warning" accent={ac(3)} />
+        <StatCard label="Completed" value={c.completed} icon={CheckCircle2} href="/customers?status=COMPLETED" tone="success" accent={ac(4)} />
       </div>
 
       {/* Data health + monthly trend */}
@@ -258,6 +263,7 @@ export default function DashboardPage() {
           icon={HeartPulse}
           href="/customers"
           tone={c.dataHealth > 0 ? "danger" : "success"}
+          accent={ac(0)}
           hint={c.dataHealth > 0 ? "Records missing ARC, bandwidth, or contact" : "All records have key fields"}
         />
 
@@ -270,21 +276,22 @@ export default function DashboardPage() {
               <AreaChart data={data.trend} margin={{ top: 8, right: 8, bottom: 0, left: 0 }}>
                 <defs>
                   <linearGradient id="trendFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.35} />
-                    <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0} />
+                    <stop offset="0%" stopColor={BRAND.cyan} stopOpacity={0.32} />
+                    <stop offset="100%" stopColor={BRAND.cyan} stopOpacity={0} />
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                 <XAxis dataKey="month" tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} />
                 <YAxis allowDecimals={false} tick={{ fontSize: 11, fill: "var(--muted-foreground)" }} axisLine={false} tickLine={false} width={28} />
-                <Tooltip contentStyle={{ background: "var(--surface)", border: "1px solid var(--border)", borderRadius: 8, fontSize: 12 }} />
+                <Tooltip content={<ChartTooltip />} />
                 <Area
                   type="monotone"
                   dataKey="count"
-                  stroke="#8b5cf6"
+                  name="New customers"
+                  stroke={BRAND.cyan}
                   strokeWidth={2.5}
                   fill="url(#trendFill)"
-                  dot={{ r: 3, fill: "#8b5cf6", strokeWidth: 0 }}
+                  dot={{ r: 3, fill: BRAND.cyan, strokeWidth: 0 }}
                   activeDot={{ r: 5 }}
                 />
               </AreaChart>
@@ -340,4 +347,70 @@ function WaterSeg({
 
 function Op({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center px-0.5 text-lg font-medium text-muted-foreground">{children}</div>;
+}
+
+// Accented section heading — a small primary bar before the label.
+function SectionHeading({ children }: { children: ReactNode }) {
+  return (
+    <h2 className="mb-3 mt-8 flex items-center gap-2 text-sm font-semibold text-muted-foreground">
+      <span className="h-3.5 w-1 rounded-full bg-primary" />
+      {children}
+    </h2>
+  );
+}
+
+// Shared tooltip for every chart so they look identical (color dot · name · value).
+function ChartTooltip({
+  active,
+  payload,
+  label,
+  format,
+}: {
+  active?: boolean;
+  payload?: { name?: string; value?: number | string; color?: string; payload?: { fill?: string } }[];
+  label?: string | number;
+  format?: (n: number) => string;
+}) {
+  if (!active || !payload?.length) return null;
+  return (
+    <div className="rounded-lg border border-border bg-surface px-3 py-2 text-xs shadow-md">
+      {label != null && label !== "" && <div className="mb-1 font-medium text-foreground">{label}</div>}
+      {payload.map((p, i) => (
+        <div key={i} className="flex items-center gap-1.5">
+          <span className="h-2 w-2 rounded-full" style={{ background: p.color ?? p.payload?.fill ?? "var(--primary)" }} />
+          <span className="text-muted-foreground">{p.name}:</span>
+          <span className="font-medium text-foreground">
+            {format ? format(Number(p.value)) : p.value}
+          </span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// Shimmering skeleton shown while the dashboard stats load — mirrors the layout.
+function DashboardSkeleton() {
+  return (
+    <div className="animate-in">
+      <div className="mb-6 border-b border-border pb-4">
+        <div className="skeleton mb-2 h-3 w-24 rounded" />
+        <div className="skeleton h-7 w-44 rounded-md" />
+      </div>
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <div key={i} className="skeleton h-28 rounded-xl" />
+        ))}
+      </div>
+      <div className="skeleton mt-4 h-44 rounded-xl" />
+      <div className="mt-8 grid grid-cols-2 gap-3 lg:grid-cols-4">
+        {Array.from({ length: 4 }).map((_, i) => (
+          <div key={i} className="skeleton h-24 rounded-xl" />
+        ))}
+      </div>
+      <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <div className="skeleton h-80 rounded-xl" />
+        <div className="skeleton h-80 rounded-xl" />
+      </div>
+    </div>
+  );
 }

@@ -18,6 +18,7 @@ export function StatCard({
   subArrow,
   subTone,
   journey,
+  accent,
 }: {
   label: string;
   value: number | string;
@@ -30,14 +31,15 @@ export function StatCard({
   subArrow?: "up" | "down"; // directional arrow + color on the sub value
   subTone?: "primary" | "success" | "warning" | "danger" | "neutral"; // color the sub value
   journey?: { start: ReactNode; current: ReactNode }; // start → current ARC view
+  accent?: string; // decorative top-bar color (CSS color); caller rotates a palette so neighbours differ
 }) {
   const router = useRouter();
   const tones: Record<string, string> = {
-    primary: "text-primary bg-primary-subtle",
-    success: "text-emerald-600 bg-emerald-50 dark:bg-emerald-950/40",
-    warning: "text-amber-600 bg-amber-50 dark:bg-amber-950/40",
-    danger: "text-red-600 bg-red-50 dark:bg-red-950/40",
-    neutral: "text-slate-500 bg-slate-100 dark:bg-slate-800",
+    primary: "text-primary bg-primary-subtle ring-1 ring-inset ring-primary/15",
+    success: "text-emerald-600 bg-emerald-50 ring-1 ring-inset ring-emerald-500/15 dark:bg-emerald-950/40",
+    warning: "text-amber-600 bg-amber-50 ring-1 ring-inset ring-amber-500/15 dark:bg-amber-950/40",
+    danger: "text-red-600 bg-red-50 ring-1 ring-inset ring-red-500/15 dark:bg-red-950/40",
+    neutral: "text-slate-500 bg-slate-100 ring-1 ring-inset ring-slate-400/15 dark:bg-slate-800",
   };
   const subTextTones: Record<string, string> = {
     primary: "text-primary",
@@ -53,13 +55,23 @@ export function StatCard({
       onClick={() => href && router.push(href)}
       disabled={!href}
       className={cn(
-        "animate-in group flex flex-col gap-3 rounded-xl border border-border bg-surface p-4 text-left transition-all",
+        "animate-in group relative flex flex-col gap-3 overflow-hidden rounded-xl border border-border bg-surface p-4 text-left transition-all",
         href && "cursor-pointer hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-md"
       )}
     >
+      {/* decorative top accent bar — color comes from the caller's rotating palette */}
+      <span
+        className="absolute inset-x-0 top-0 h-0.5 opacity-80 transition-all group-hover:h-1 group-hover:opacity-100"
+        style={{ background: accent ?? "var(--primary)" }}
+      />
       <div className="flex items-center justify-between">
         <span className="text-xs font-medium text-muted-foreground">{label}</span>
-        <span className={cn("flex h-8 w-8 items-center justify-center rounded-lg", tones[tone])}>
+        <span
+          className={cn(
+            "flex h-8 w-8 items-center justify-center rounded-lg transition-transform group-hover:scale-105",
+            tones[tone]
+          )}
+        >
           <Icon className="h-4 w-4" />
         </span>
       </div>
