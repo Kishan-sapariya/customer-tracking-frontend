@@ -17,10 +17,10 @@ interface ChangeRow {
   id: string;
   action: Action;
   oldValues: { arcAmount?: number; bandwidth?: string } | null;
-  newValues: { arcAmount?: number; bandwidth?: string; effectiveDate?: string } | null;
+  newValues: { arcAmount?: number; bandwidth?: string; effectiveDate?: string; mailReceivedDate?: string } | null;
   reason: string | null;
   createdAt: string;
-  customer: { id: string; customerCode: string; company: string; arcAmount: number | null };
+  customer: { id: string; customerCode: string; company: string; arcAmount: number | null; details?: { service?: { circuitId?: string } } };
   performedBy: { name: string; role: string } | null;
 }
 
@@ -31,17 +31,35 @@ const ACTION_STYLE: Record<Action, { color: string; icon: typeof ArrowUpCircle }
   DISCONNECTION: { color: "bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-950/40 dark:text-red-400", icon: PowerOff },
 };
 
+// Format a date as YYYY-MM-DD (the importer's expected format), using local
+// date parts so the day doesn't shift across time zones.
+function isoDate(v?: string | null): string {
+  if (!v) return "";
+  const d = new Date(v);
+  if (Number.isNaN(d.getTime())) return "";
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+// Commercial-changes export. The first block mirrors the importer template's
+// columns (so an export round-trips back through the importer); the rest are
+// extra human-friendly context. The importer keys customers on Circuit ID.
 const exportColumns = [
-  { header: "Date", accessor: (r: ChangeRow) => fmtDateTime(r.createdAt) },
+  // ── Importer-compulsory columns (must always be present) ──
+  { header: "Circuit ID", accessor: (r: ChangeRow) => r.customer.details?.service?.circuitId ?? "" },
+  { header: "Change Type", accessor: (r: ChangeRow) => r.action }, // raw enum so it re-imports
+  { header: "New ARC", accessor: (r: ChangeRow) => r.newValues?.arcAmount ?? "" },
+  { header: "New Bandwidth", accessor: (r: ChangeRow) => r.newValues?.bandwidth ?? "" },
+  { header: "Effective Date", accessor: (r: ChangeRow) => isoDate(r.newValues?.effectiveDate) },
+  { header: "Mail Received Date", accessor: (r: ChangeRow) => isoDate(r.newValues?.mailReceivedDate) },
+  { header: "Disconnection Reason", accessor: (r: ChangeRow) => (r.action === "DISCONNECTION" ? r.reason ?? "" : "") },
+  { header: "Reason", accessor: (r: ChangeRow) => (r.action === "DISCONNECTION" ? "" : r.reason ?? ""), width: 30 },
+  // ── Extra context columns ──
   { header: "Customer Code", accessor: (r: ChangeRow) => r.customer.customerCode },
   { header: "Company", accessor: (r: ChangeRow) => r.customer.company, width: 26 },
-  { header: "Action", accessor: (r: ChangeRow) => ACTION_LABEL[r.action] ?? r.action },
   { header: "Old ARC", accessor: (r: ChangeRow) => r.oldValues?.arcAmount ?? "" },
-  { header: "New ARC", accessor: (r: ChangeRow) => r.newValues?.arcAmount ?? "" },
   { header: "ARC Difference", accessor: (r: ChangeRow) => { const d = arcDiff(r); return d ? (d.dir === "up" ? d.amount : -d.amount) : ""; } },
   { header: "Old Bandwidth", accessor: (r: ChangeRow) => r.oldValues?.bandwidth ?? "" },
-  { header: "New Bandwidth", accessor: (r: ChangeRow) => r.newValues?.bandwidth ?? "" },
-  { header: "Effective Date", accessor: (r: ChangeRow) => (r.newValues?.effectiveDate ? new Date(r.newValues.effectiveDate).toLocaleDateString("en-IN") : "") },
+  { header: "Recorded At", accessor: (r: ChangeRow) => fmtDateTime(r.createdAt) },
   { header: "By", accessor: (r: ChangeRow) => r.performedBy?.name ?? "" },
 ];
 

@@ -123,6 +123,7 @@ function ActionModal({
   const [arc, setArc] = useState<string>(customer.arcAmount?.toString() ?? "");
   const [reason, setReason] = useState("");
   const [effectiveDate, setEffectiveDate] = useState("");
+  const [mailReceivedDate, setMailReceivedDate] = useState("");
 
   const isPlanChange = action === "UPGRADE" || action === "DOWNGRADE" || action === "RATE_REVISION";
   const titles: Record<ActionType, string> = {
@@ -140,6 +141,7 @@ function ActionModal({
       action,
       reason: reason || undefined,
       effectiveDate: effectiveDate || undefined,
+      mailReceivedDate: mailReceivedDate || undefined,
     };
     if (isPlanChange) {
       body.newBandwidth = bandwidth || undefined;
@@ -189,6 +191,9 @@ function ActionModal({
           hint="Leave blank to use today"
         >
           <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+        </Field>
+        <Field label="Mail received date" hint="Date the customer's approval mail arrived (optional)">
+          <Input type="date" value={mailReceivedDate} onChange={(e) => setMailReceivedDate(e.target.value)} />
         </Field>
         <Field label={action === "DISCONNECTION" ? "Reason for disconnection" : "Reason / note"}>
           <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional note for the history log" />
