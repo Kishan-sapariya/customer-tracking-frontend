@@ -68,6 +68,10 @@ export default function DashboardPage() {
   const c = data.counts;
   const arc = data.arc;
   const cm = data.commercial; // all-time, used by the cards/chart below
+  // `arc.total` is the sum of ARC across ALL customers (disconnected ones still
+  // carry their last ARC). Subtract the churned ARC so the Total card's current
+  // value reflects the live book — matching the Active card.
+  const totalCurrentArc = arc.total - cm.disconnection.amount;
   // Waterfall with a FIXED baseline: the old (legacy) customers' original ARC
   // never changes as new customers are added. New customers show up as their own
   // segment, then the commercial changes:
@@ -105,7 +109,7 @@ export default function DashboardPage() {
 
       {/* Row 1 — counts + ARC */}
       <div className="stagger grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
-        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" accent={ac(0)} subLabel="Total ARC (start → current)" journey={{ start: <Amount value={arc.baseTotal} />, current: <Amount value={arc.total} /> }} />
+        <StatCard label="Total Customers" value={c.total} icon={Users} href="/customers" tone="primary" accent={ac(0)} subLabel="Total ARC (start → current)" journey={{ start: <Amount value={arc.baseTotal} />, current: <Amount value={totalCurrentArc} /> }} />
         <StatCard label="Old Customers" value={c.old} icon={Boxes} href="/customers?type=OLD" tone="neutral" accent={ac(1)} subLabel="Old ARC (start → current)" journey={{ start: <Amount value={arc.baseOld} />, current: <Amount value={arc.old} /> }} />
         <StatCard label="New Customers" value={c.new} icon={PackagePlus} href="/customers?type=NEW" tone="primary" accent={ac(2)} subLabel="New ARC (start → current)" journey={{ start: <Amount value={arc.baseNew} />, current: <Amount value={arc.new} /> }} />
         <StatCard label="Active" value={c.active} icon={Activity} href="/customers?active=true" tone="success" accent={ac(3)} sub={<Amount value={arc.active} />} subLabel="Active ARC" subArrow="up" />
