@@ -1,9 +1,9 @@
 "use client";
-import { Suspense, useCallback, useEffect, useState } from "react";
+import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowUpCircle, ArrowDownCircle, RefreshCw, PowerOff, ArrowUp, ArrowDown } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Select, Spinner, EmptyState, Button } from "@/components/ui";
+import { Input, Select, Spinner, EmptyState, Button } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
 import { apiList } from "@/lib/api";
 import { fmtDate, fmtDateTime, ACTION_LABEL } from "@/lib/format";
@@ -12,6 +12,25 @@ import { cn } from "@/lib/utils";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Action = "UPGRADE" | "DOWNGRADE" | "RATE_REVISION" | "DISCONNECTION";
+type DateRange = "all" | "last_month" | "custom";
+
+// Resolve a preset (or custom from/to) into an ISO date window for the API.
+// "Last month" = the previous calendar month.
+function resolveRange(range: DateRange, from: string, to: string): { dateFrom?: string; dateTo?: string } {
+  if (range === "last_month") {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), now.getMonth() - 1, 1, 0, 0, 0, 0);
+    const end = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59, 999); // last day of prev month
+    return { dateFrom: start.toISOString(), dateTo: end.toISOString() };
+  }
+  if (range === "custom") {
+    return {
+      dateFrom: from ? new Date(`${from}T00:00:00`).toISOString() : undefined,
+      dateTo: to ? new Date(`${to}T23:59:59.999`).toISOString() : undefined,
+    };
+  }
+  return {};
+}
 
 interface ChangeRow {
   id: string;
@@ -80,8 +99,16 @@ function ChangesInner() {
   const initialAction = (sp.get("action") as Action) || "";
 
   const [action, setAction] = useState<string>(initialAction);
+  const [range, setRange] = useState<DateRange>("all");
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo, setCustomTo] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize] = useState(25);
+
+  const { dateFrom, dateTo } = useMemo(
+    () => resolveRange(range, customFrom, customTo),
+    [range, customFrom, customTo]
+  );
   const [items, setItems] = useState<ChangeRow[]>([]);
   const [pagination, setPagination] = useState<{ total: number; totalPages: number; page: number; pageSize: number } | null>(null);
   const [loading, setLoading] = useState(true);
@@ -89,19 +116,19 @@ function ChangesInner() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, page, pageSize } });
+      const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, dateFrom, dateTo, page, pageSize } });
       setItems(res.items);
       setPagination(res.pagination);
     } finally {
       setLoading(false);
     }
-  }, [action, page, pageSize]);
+  }, [action, dateFrom, dateTo, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [action]);
+  useEffect(() => { setPage(1); }, [action, dateFrom, dateTo]);
 
   const fetchAll = async () => {
-    const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, page: 1, pageSize: 5000 } });
+    const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, dateFrom, dateTo, page: 1, pageSize: 5000 } });
     return res.items;
   };
 
@@ -116,7 +143,7 @@ function ChangesInner() {
         }
       />
 
-      <div className="mb-4 flex items-center gap-2">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
         <Select value={action} onChange={(e) => setAction(e.target.value)} className="w-auto">
           <option value="">All changes</option>
           <option value="UPGRADE">Upgrades</option>
@@ -124,6 +151,18 @@ function ChangesInner() {
           <option value="RATE_REVISION">Rate Revisions</option>
           <option value="DISCONNECTION">Disconnections</option>
         </Select>
+        <Select value={range} onChange={(e) => setRange(e.target.value as DateRange)} className="w-auto">
+          <option value="all">All time</option>
+          <option value="last_month">Last month</option>
+          <option value="custom">Custom range</option>
+        </Select>
+        {range === "custom" && (
+          <>
+            <Input type="date" value={customFrom} max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} className="w-auto" />
+            <span className="text-xs text-muted-foreground">to</span>
+            <Input type="date" value={customTo} min={customFrom || undefined} onChange={(e) => setCustomTo(e.target.value)} className="w-auto" />
+          </>
+        )}
       </div>
 
       {/* Table (desktop) — scrolls internally with a sticky header */}
