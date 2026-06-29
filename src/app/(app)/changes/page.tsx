@@ -13,6 +13,11 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 type Action = "UPGRADE" | "DOWNGRADE" | "RATE_REVISION" | "DISCONNECTION";
 type DateRange = "all" | "last_month" | "custom";
+const RANGE_OPTIONS: { key: DateRange; label: string }[] = [
+  { key: "all", label: "All time" },
+  { key: "last_month", label: "Last month" },
+  { key: "custom", label: "Custom" },
+];
 
 // Resolve a preset (or custom from/to) into an ISO date window for the API.
 // "Last month" = the previous calendar month.
@@ -151,11 +156,20 @@ function ChangesInner() {
           <option value="RATE_REVISION">Rate Revisions</option>
           <option value="DISCONNECTION">Disconnections</option>
         </Select>
-        <Select value={range} onChange={(e) => setRange(e.target.value as DateRange)} className="w-auto">
-          <option value="all">All time</option>
-          <option value="last_month">Last month</option>
-          <option value="custom">Custom range</option>
-        </Select>
+        <div className="inline-flex shrink-0 rounded-lg border border-border p-0.5">
+          {RANGE_OPTIONS.map((o) => (
+            <button
+              key={o.key}
+              onClick={() => setRange(o.key)}
+              className={cn(
+                "rounded-md px-2.5 py-1 text-xs font-medium transition-colors",
+                range === o.key ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:text-foreground"
+              )}
+            >
+              {o.label}
+            </button>
+          ))}
+        </div>
         {range === "custom" && (
           <>
             <Input type="date" value={customFrom} max={customTo || undefined} onChange={(e) => setCustomFrom(e.target.value)} className="w-auto" />
