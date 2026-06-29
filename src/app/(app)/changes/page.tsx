@@ -1,11 +1,14 @@
 "use client";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUpCircle, ArrowDownCircle, RefreshCw, PowerOff, ArrowUp, ArrowDown } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, RefreshCw, PowerOff, ArrowUp, ArrowDown, Pencil } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
-import { Input, Select, Spinner, EmptyState, Button } from "@/components/ui";
+import { Input, Select, Spinner, EmptyState, Button, Modal, Field } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
-import { apiList } from "@/lib/api";
+import { InlineError } from "@/components/InlineError";
+import { apiList, api } from "@/lib/api";
+import { useActionError } from "@/lib/useActionError";
+import { useAuth, can } from "@/lib/stores";
 import { fmtDate, fmtDateTime, ACTION_LABEL } from "@/lib/format";
 import { Amount } from "@/components/Amount";
 import { cn } from "@/lib/utils";
@@ -117,6 +120,9 @@ function ChangesInner() {
   const [items, setItems] = useState<ChangeRow[]>([]);
   const [pagination, setPagination] = useState<{ total: number; totalPages: number; page: number; pageSize: number } | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState<ChangeRow | null>(null);
+
+  const caps = can(useAuth((s) => s.user?.role));
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -191,13 +197,14 @@ function ChangesInner() {
               <th className="px-4 py-3 font-medium">Change</th>
               <th className="px-4 py-3 font-medium">Difference</th>
               <th className="px-4 py-3 font-medium">By</th>
+              {caps.lifecycle && <th className="px-4 py-3 text-right font-medium">Edit</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={6} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
+              <tr><td colSpan={caps.lifecycle ? 7 : 6} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={6}><EmptyState title="No commercial changes yet" hint="Upgrades, downgrades, rate revisions and disconnections will appear here." /></td></tr>
+              <tr><td colSpan={caps.lifecycle ? 7 : 6}><EmptyState title="No commercial changes yet" hint="Upgrades, downgrades, rate revisions and disconnections will appear here." /></td></tr>
             ) : (
               items.map((r) => {
                 const s = ACTION_STYLE[r.action];
@@ -221,6 +228,13 @@ function ChangesInner() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {r.performedBy ? <>{r.performedBy.name}<div className="text-[10px]">{r.performedBy.role}</div></> : "—"}
                     </td>
+                    {caps.lifecycle && (
+                      <td className="px-4 py-3 text-right">
+                        <button onClick={() => setEditing(r)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-primary" title="Edit change">
+                          <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    )}
                   </tr>
                 );
               })
@@ -257,7 +271,14 @@ function ChangesInner() {
                 </div>
                 <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3 text-[11px] text-muted-foreground">
                   <span>{fmtDateTime(r.createdAt)}</span>
-                  {r.performedBy && <span>by {r.performedBy.name} · {r.performedBy.role}</span>}
+                  <div className="flex items-center gap-2">
+                    {r.performedBy && <span>by {r.performedBy.name} · {r.performedBy.role}</span>}
+                    {caps.lifecycle && (
+                      <button onClick={() => setEditing(r)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-primary hover:bg-surface-muted" title="Edit change">
+                        <Pencil className="h-3.5 w-3.5" /> Edit
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             );
@@ -277,7 +298,91 @@ function ChangesInner() {
           </div>
         </div>
       )}
+
+      {editing && (
+        <EditChangeModal
+          row={editing}
+          onClose={() => setEditing(null)}
+          onDone={() => { setEditing(null); load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// Edit a recorded commercial change. Fields shown depend on the action type:
+// ARC for upgrade/downgrade, bandwidth for upgrade/downgrade/rate-revision,
+// and dates + reason for all. Saving syncs the customer's live values when this
+// is their most recent change (handled server-side).
+function EditChangeModal({ row, onClose, onDone }: { row: ChangeRow; onClose: () => void; onDone: () => void }) {
+  const { run, error, loading } = useActionError();
+  const isArc = row.action === "UPGRADE" || row.action === "DOWNGRADE";
+  const isBw = row.action === "UPGRADE" || row.action === "DOWNGRADE" || row.action === "RATE_REVISION";
+
+  const [bandwidth, setBandwidth] = useState(row.newValues?.bandwidth ?? "");
+  const [arc, setArc] = useState(row.newValues?.arcAmount?.toString() ?? "");
+  const [effectiveDate, setEffectiveDate] = useState(isoDate(row.newValues?.effectiveDate));
+  const [mailReceivedDate, setMailReceivedDate] = useState(isoDate(row.newValues?.mailReceivedDate));
+  const [reason, setReason] = useState(row.reason ?? "");
+
+  const submit = async () => {
+    const body: Record<string, unknown> = {
+      effectiveDate: effectiveDate || undefined,
+      mailReceivedDate: mailReceivedDate || undefined,
+      reason,
+    };
+    if (isBw) body.newBandwidth = bandwidth || undefined;
+    if (isArc) body.newArcAmount = arc ? Number(arc) : undefined;
+    await run(() => api(`/changes/${row.id}`, { method: "PATCH", body }), {
+      successMessage: "Change updated",
+      onSuccess: onDone,
+    });
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Edit ${ACTION_LABEL[row.action] ?? row.action}`}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" loading={loading} onClick={submit}>Save changes</Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <div className="rounded-lg bg-surface-muted p-3 text-xs text-muted-foreground">
+          <div className="flex justify-between"><span>Customer</span><span className="font-medium text-foreground">{row.customer.company}</span></div>
+          <div className="mt-1 flex justify-between"><span>Recorded</span><span className="font-medium text-foreground">{fmtDateTime(row.createdAt)}</span></div>
+        </div>
+        {isBw && (
+          <Field label="New bandwidth">
+            <Input value={bandwidth} onChange={(e) => setBandwidth(e.target.value)} placeholder="e.g. 200 Mbps" />
+          </Field>
+        )}
+        {isArc && (
+          <Field label="New ARC (₹)">
+            <Input type="number" value={arc} onChange={(e) => setArc(e.target.value)} placeholder="e.g. 450000" />
+          </Field>
+        )}
+        <Field label={row.action === "DISCONNECTION" ? "Disconnection date" : "Effective date"}>
+          <Input type="date" value={effectiveDate} onChange={(e) => setEffectiveDate(e.target.value)} />
+        </Field>
+        <Field label="Mail received date">
+          <Input type="date" value={mailReceivedDate} onChange={(e) => setMailReceivedDate(e.target.value)} />
+        </Field>
+        <Field label={row.action === "DISCONNECTION" ? "Reason for disconnection" : "Reason / note"}>
+          <Input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Optional note for the history log" />
+        </Field>
+        {isArc && (
+          <p className="text-[11px] text-muted-foreground">
+            If this is the customer&apos;s most recent change, their current ARC/bandwidth will update too.
+          </p>
+        )}
+        <InlineError message={error} />
+      </div>
+    </Modal>
   );
 }
 
