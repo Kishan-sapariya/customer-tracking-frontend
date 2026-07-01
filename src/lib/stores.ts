@@ -39,6 +39,7 @@ export function can(role: Role | undefined) {
     recordBilling: isWriter,
     recordFtb: isWriter,
     lifecycle: isWriter,
+    deleteChanges: role === "ADMIN" || role === "MASTER", // delete commercial changes (audit)
     manageUsers: role === "ADMIN" || role === "MASTER",
     systemSettings: role === "MASTER",
   };

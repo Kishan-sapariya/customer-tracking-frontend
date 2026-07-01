@@ -1,7 +1,7 @@
 "use client";
 import { Suspense, useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { ArrowUpCircle, ArrowDownCircle, RefreshCw, PowerOff, ArrowUp, ArrowDown, Pencil } from "lucide-react";
+import { ArrowUpCircle, ArrowDownCircle, RefreshCw, PowerOff, ArrowUp, ArrowDown, Pencil, Trash2 } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Input, Select, Spinner, EmptyState, Button, Modal, Field } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
@@ -121,8 +121,10 @@ function ChangesInner() {
   const [pagination, setPagination] = useState<{ total: number; totalPages: number; page: number; pageSize: number } | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ChangeRow | null>(null);
+  const [deleting, setDeleting] = useState<ChangeRow | null>(null);
 
   const caps = can(useAuth((s) => s.user?.role));
+  const canAct = caps.lifecycle || caps.deleteChanges;
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -197,14 +199,14 @@ function ChangesInner() {
               <th className="px-4 py-3 font-medium">Change</th>
               <th className="px-4 py-3 font-medium">Difference</th>
               <th className="px-4 py-3 font-medium">By</th>
-              {caps.lifecycle && <th className="px-4 py-3 text-right font-medium">Edit</th>}
+              {canAct && <th className="px-4 py-3 text-right font-medium">Actions</th>}
             </tr>
           </thead>
           <tbody>
             {loading ? (
-              <tr><td colSpan={caps.lifecycle ? 7 : 6} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
+              <tr><td colSpan={canAct ? 7 : 6} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
             ) : items.length === 0 ? (
-              <tr><td colSpan={caps.lifecycle ? 7 : 6}><EmptyState title="No commercial changes yet" hint="Upgrades, downgrades, rate revisions and disconnections will appear here." /></td></tr>
+              <tr><td colSpan={canAct ? 7 : 6}><EmptyState title="No commercial changes yet" hint="Upgrades, downgrades, rate revisions and disconnections will appear here." /></td></tr>
             ) : (
               items.map((r) => {
                 const s = ACTION_STYLE[r.action];
@@ -228,11 +230,20 @@ function ChangesInner() {
                     <td className="px-4 py-3 text-xs text-muted-foreground">
                       {r.performedBy ? <>{r.performedBy.name}<div className="text-[10px]">{r.performedBy.role}</div></> : "—"}
                     </td>
-                    {caps.lifecycle && (
-                      <td className="px-4 py-3 text-right">
-                        <button onClick={() => setEditing(r)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-primary" title="Edit change">
-                          <Pencil className="h-3.5 w-3.5" />
-                        </button>
+                    {canAct && (
+                      <td className="px-4 py-3">
+                        <div className="flex items-center justify-end gap-1">
+                          {caps.lifecycle && (
+                            <button onClick={() => setEditing(r)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-primary" title="Edit change">
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                          {caps.deleteChanges && (
+                            <button onClick={() => setDeleting(r)} className="rounded-md p-1.5 text-muted-foreground transition-colors hover:bg-surface-muted hover:text-danger" title="Delete change">
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -278,6 +289,11 @@ function ChangesInner() {
                         <Pencil className="h-3.5 w-3.5" /> Edit
                       </button>
                     )}
+                    {caps.deleteChanges && (
+                      <button onClick={() => setDeleting(r)} className="inline-flex items-center gap-1 rounded-md px-1.5 py-1 text-danger hover:bg-surface-muted" title="Delete change">
+                        <Trash2 className="h-3.5 w-3.5" /> Delete
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -306,7 +322,56 @@ function ChangesInner() {
           onDone={() => { setEditing(null); load(); }}
         />
       )}
+
+      {deleting && (
+        <DeleteChangeModal
+          row={deleting}
+          onClose={() => setDeleting(null)}
+          onDone={() => { setDeleting(null); load(); }}
+        />
+      )}
     </div>
+  );
+}
+
+// Confirm + delete a commercial change (Admin & Master). When it's the
+// customer's latest change of its kind, the server reverts their live values.
+function DeleteChangeModal({ row, onClose, onDone }: { row: ChangeRow; onClose: () => void; onDone: () => void }) {
+  const { run, error, loading } = useActionError();
+  const reverts = row.action !== "DISCONNECTION"
+    ? "If this is the customer's most recent change, their ARC/bandwidth will revert to the previous values."
+    : "If the customer is still disconnected by this change, deleting it will reactivate them.";
+
+  const submit = async () => {
+    await run(() => api(`/changes/${row.id}`, { method: "DELETE" }), {
+      successMessage: "Change deleted",
+      onSuccess: onDone,
+    });
+  };
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      title={`Delete ${ACTION_LABEL[row.action] ?? row.action}?`}
+      footer={
+        <>
+          <Button variant="secondary" size="sm" onClick={onClose}>Cancel</Button>
+          <Button size="sm" variant="danger" loading={loading} onClick={submit}>Delete</Button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3 text-sm">
+        <div className="rounded-lg bg-surface-muted p-3 text-xs text-muted-foreground">
+          <div className="flex justify-between"><span>Customer</span><span className="font-medium text-foreground">{row.customer.company}</span></div>
+          <div className="mt-1 flex justify-between"><span>Recorded</span><span className="font-medium text-foreground">{fmtDateTime(row.createdAt)}</span></div>
+        </div>
+        <p className="text-muted-foreground">
+          This permanently removes the change from the log. {reverts}
+        </p>
+        <InlineError message={error} />
+      </div>
+    </Modal>
   );
 }
 
