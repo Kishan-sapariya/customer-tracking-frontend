@@ -24,6 +24,7 @@ interface StatsResponse {
   counts: DashboardCounts;
   arc: { total: number; active: number; old: number; new: number; baseTotal: number; baseOld: number; baseNew: number };
   commercial: Commercial;
+  commercialByType: { new: Commercial; old: Commercial };
   commercialPeriods: Record<Period, Commercial>;
   trend: { month: string; count: number }[];
   oldVsNew: { type: string; count: number }[];
@@ -185,14 +186,10 @@ export default function DashboardPage() {
         </p>
       </Card>
 
-      {/* Row 2 — commercial changes (count + ARC impact) */}
-      <SectionHeading>Commercial changes</SectionHeading>
-      <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
-        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href="/changes?action=UPGRADE" tone="success" accent={ac(2)} sub={<Amount value={cm.upgrade.amount} />} subLabel="ARC gained" subTone="success" />
-        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href="/changes?action=DOWNGRADE" tone="warning" accent={ac(3)} sub={<Amount value={cm.downgrade.amount} />} subLabel="ARC reduced" subTone="warning" />
-        <StatCard label="Rate Revisions" value={cm.rateRevision.count} icon={RefreshCw} href="/changes?action=RATE_REVISION" tone="primary" accent={ac(4)} hint="Bandwidth change · no ARC impact" />
-        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href="/changes?action=DISCONNECTION" tone="danger" accent={ac(0)} sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subTone="danger" />
-      </div>
+      {/* Row 2 — commercial changes (count + ARC impact) — all, then split by type */}
+      <CommercialRow title="Commercial changes" cm={cm} />
+      <CommercialRow title="Commercial changes · New customers" cm={data.commercialByType.new} typeParam="NEW" />
+      <CommercialRow title="Commercial changes · Old customers" cm={data.commercialByType.old} typeParam="OLD" />
 
       {/* Commercial changes (bar) + Old vs New split (pie), side by side */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
@@ -353,6 +350,23 @@ function WaterSeg({
 
 function Op({ children }: { children: React.ReactNode }) {
   return <div className="flex items-center px-0.5 text-lg font-medium text-muted-foreground">{children}</div>;
+}
+
+// A row of the four commercial-change stat cards. Cards link to the changes
+// list, optionally scoped to a customer type (New/Old) via ?type=.
+function CommercialRow({ title, cm, typeParam }: { title: string; cm: Commercial; typeParam?: "NEW" | "OLD" }) {
+  const t = typeParam ? `&type=${typeParam}` : "";
+  return (
+    <>
+      <SectionHeading>{title}</SectionHeading>
+      <div className="stagger grid grid-cols-2 gap-3 lg:grid-cols-4">
+        <StatCard label="Upgrades" value={cm.upgrade.count} icon={ArrowUpCircle} href={`/changes?action=UPGRADE${t}`} tone="success" accent={ac(2)} sub={<Amount value={cm.upgrade.amount} />} subLabel="ARC gained" subTone="success" />
+        <StatCard label="Downgrades" value={cm.downgrade.count} icon={ArrowDownCircle} href={`/changes?action=DOWNGRADE${t}`} tone="warning" accent={ac(3)} sub={<Amount value={cm.downgrade.amount} />} subLabel="ARC reduced" subTone="warning" />
+        <StatCard label="Rate Revisions" value={cm.rateRevision.count} icon={RefreshCw} href={`/changes?action=RATE_REVISION${t}`} tone="primary" accent={ac(4)} hint="Bandwidth change · no ARC impact" />
+        <StatCard label="Disconnections" value={cm.disconnection.count} icon={PowerOff} href={`/changes?action=DISCONNECTION${t}`} tone="danger" accent={ac(0)} sub={<Amount value={cm.disconnection.amount} />} subLabel="ARC churned" subTone="danger" />
+      </div>
+    </>
+  );
 }
 
 // Accented section heading — a small primary bar before the label.

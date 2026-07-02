@@ -105,8 +105,10 @@ function ChangesInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const initialAction = (sp.get("action") as Action) || "";
+  const initialType = (sp.get("type") as "OLD" | "NEW") || "";
 
   const [action, setAction] = useState<string>(initialAction);
+  const [type, setType] = useState<string>(initialType);
   const [range, setRange] = useState<DateRange>("all");
   const [customFrom, setCustomFrom] = useState("");
   const [customTo, setCustomTo] = useState("");
@@ -129,19 +131,19 @@ function ChangesInner() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, dateFrom, dateTo, page, pageSize } });
+      const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, type: type || undefined, dateFrom, dateTo, page, pageSize } });
       setItems(res.items);
       setPagination(res.pagination);
     } finally {
       setLoading(false);
     }
-  }, [action, dateFrom, dateTo, page, pageSize]);
+  }, [action, type, dateFrom, dateTo, page, pageSize]);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { setPage(1); }, [action, dateFrom, dateTo]);
+  useEffect(() => { setPage(1); }, [action, type, dateFrom, dateTo]);
 
   const fetchAll = async () => {
-    const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, dateFrom, dateTo, page: 1, pageSize: 5000 } });
+    const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, type: type || undefined, dateFrom, dateTo, page: 1, pageSize: 5000 } });
     return res.items;
   };
 
@@ -163,6 +165,11 @@ function ChangesInner() {
           <option value="DOWNGRADE">Downgrades</option>
           <option value="RATE_REVISION">Rate Revisions</option>
           <option value="DISCONNECTION">Disconnections</option>
+        </Select>
+        <Select value={type} onChange={(e) => setType(e.target.value)} className="w-auto">
+          <option value="">All customers</option>
+          <option value="NEW">New</option>
+          <option value="OLD">Old</option>
         </Select>
         <div className="inline-flex shrink-0 rounded-lg border border-border p-0.5">
           {RANGE_OPTIONS.map((o) => (
