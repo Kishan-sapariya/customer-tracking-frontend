@@ -253,7 +253,7 @@ export default function DashboardPage() {
         <StatCard label="Delivery Pending" value={c.deliveryPending} icon={Truck} href="/customers?type=NEW&status=DELIVERY_PENDING" tone="warning" accent={ac(1)} />
         <StatCard label="Billing Pending" value={c.billingPending} icon={ReceiptText} href="/customers?type=NEW&status=BILLING_PENDING" tone="warning" accent={ac(2)} />
         <StatCard label="FTB Pending" value={c.ftbPending} icon={IndianRupee} href="/customers?type=NEW&status=FTB_PENDING" tone="warning" accent={ac(3)} />
-        <StatCard label="Completed" value={c.completed} icon={CheckCircle2} href="/customers?status=COMPLETED" tone="success" accent={ac(4)} />
+        <StatCard label="Completed" value={c.completed} icon={CheckCircle2} href="/customers?type=NEW&status=COMPLETED" tone="success" accent={ac(4)} />
       </div>
 
       {/* Data health + monthly trend */}
