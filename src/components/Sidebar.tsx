@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import {
   LayoutDashboard,
   Users,
+  UserCog,
   History,
   PackagePlus,
   Boxes,
@@ -32,6 +33,7 @@ type Caps = ReturnType<typeof can>;
 const NAV = [
   { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, section: "Overview", show: () => true },
   { href: "/customers", label: "Customers", icon: Users, section: "Overview", show: () => true },
+  { href: "/sams", label: "SAM-wise", icon: UserCog, section: "Overview", show: () => true },
   { href: "/old-customers", label: "Old Customers", icon: Boxes, section: "Manage", show: (c: Caps) => c.writeCustomers },
   { href: "/new-customers", label: "New Customers", icon: PackagePlus, section: "Manage", show: (c: Caps) => c.writeCustomers },
   { href: "/worklist", label: "My Worklist", icon: ListChecks, section: "Manage", show: (c: Caps) => c.setDelivery || c.recordBilling },
