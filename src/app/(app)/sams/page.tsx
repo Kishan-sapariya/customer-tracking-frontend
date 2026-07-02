@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, UserCog, Users, UserCheck, Activity, TrendingUp, ChevronRight } from "lucide-react";
+import { Search, UserCog, UserCheck, TrendingUp, ChevronRight } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Input, Spinner, EmptyState } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
@@ -67,13 +67,8 @@ export default function SamsPage() {
   const totals = useMemo(
     () =>
       filtered.reduce(
-        (acc, r) => ({
-          customers: acc.customers + r.customers,
-          active: acc.active + r.active,
-          arc: acc.arc + r.arc,
-          activeArc: acc.activeArc + r.activeArc,
-        }),
-        { customers: 0, active: 0, arc: 0, activeArc: 0 }
+        (acc, r) => ({ active: acc.active + r.active, activeArc: acc.activeArc + r.activeArc }),
+        { active: 0, activeArc: 0 }
       ),
     [filtered]
   );
@@ -99,11 +94,9 @@ export default function SamsPage() {
 
       {/* Totals */}
       {!loading && filtered.length > 0 && (
-        <div className="mb-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-5">
+        <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
           <SummaryTile label="SAMs" value={String(filtered.length)} icon={UserCog} />
-          <SummaryTile label="Customers" value={totals.customers.toLocaleString("en-IN")} icon={Users} />
           <SummaryTile label="Active Customers" value={totals.active.toLocaleString("en-IN")} icon={UserCheck} />
-          <SummaryTile label="Total ARC" value={<Amount value={totals.arc} />} icon={Activity} />
           <SummaryTile label="Active ARC" value={<Amount value={totals.activeArc} />} icon={TrendingUp} />
         </div>
       )}
