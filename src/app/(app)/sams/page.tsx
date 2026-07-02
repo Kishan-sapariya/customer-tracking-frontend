@@ -15,8 +15,11 @@ interface SamRow {
   sam: string;
   customers: number;
   active: number;
+  oldCustomers: number;
   newCustomers: number;
   arc: number;
+  oldArc: number;
+  newArc: number;
   activeArc: number;
   upgrade: { count: number; amount: number };
   downgrade: { count: number; amount: number };
@@ -28,9 +31,11 @@ const exportColumns: ExportColumn<SamRow>[] = [
   { header: "SAM Executive", accessor: (r) => r.sam, width: 26 },
   { header: "Customers", accessor: (r) => r.customers },
   { header: "Active", accessor: (r) => r.active },
+  { header: "Old Customers", accessor: (r) => r.oldCustomers },
   { header: "New Customers", accessor: (r) => r.newCustomers },
   { header: "Total ARC (INR)", accessor: (r) => r.arc },
-  { header: "Active ARC (INR)", accessor: (r) => r.activeArc },
+  { header: "Old ARC (INR)", accessor: (r) => r.oldArc },
+  { header: "New ARC (INR)", accessor: (r) => r.newArc },
   { header: "Upgrades", accessor: (r) => r.upgrade.count },
   { header: "Upgrade ARC (INR)", accessor: (r) => r.upgrade.amount },
   { header: "Downgrades", accessor: (r) => r.downgrade.count },
@@ -38,6 +43,7 @@ const exportColumns: ExportColumn<SamRow>[] = [
   { header: "Rate Revisions", accessor: (r) => r.rateRevision.count },
   { header: "Disconnections", accessor: (r) => r.disconnection.count },
   { header: "Disconnected ARC (INR)", accessor: (r) => r.disconnection.amount },
+  { header: "Active ARC (INR)", accessor: (r) => r.activeArc },
 ];
 
 export default function SamsPage() {
@@ -104,21 +110,24 @@ export default function SamsPage() {
                 <th className="px-4 py-3 font-medium">SAM Executive</th>
                 <th className="px-4 py-3 text-right font-medium">Customers</th>
                 <th className="px-4 py-3 text-right font-medium">Active</th>
+                <th className="px-4 py-3 text-right font-medium">Old</th>
                 <th className="px-4 py-3 text-right font-medium">New</th>
                 <th className="px-4 py-3 text-right font-medium">Total ARC</th>
-                <th className="px-4 py-3 text-right font-medium">Active ARC</th>
+                <th className="px-4 py-3 text-right font-medium">Old ARC</th>
+                <th className="px-4 py-3 text-right font-medium">New ARC</th>
                 <th className="px-4 py-3 text-right font-medium">Upgrades</th>
                 <th className="px-4 py-3 text-right font-medium">Downgrades</th>
                 <th className="px-4 py-3 text-right font-medium">Rate Rev.</th>
                 <th className="px-4 py-3 text-right font-medium">Disconnections</th>
+                <th className="px-4 py-3 text-right font-medium">Active ARC</th>
                 <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
+                <tr><td colSpan={14} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={11}><EmptyState title="No SAMs found" hint="No customers have a SAM executive assigned yet." /></td></tr>
+                <tr><td colSpan={14}><EmptyState title="No SAMs found" hint="No customers have a SAM executive assigned yet." /></td></tr>
               ) : (
                 filtered.map((r) => (
                   <tr key={r.sam} onClick={() => go(r.sam)} className="cursor-pointer divide-x divide-border border-b border-border last:border-0 transition-colors hover:bg-surface-muted/40">
@@ -132,13 +141,16 @@ export default function SamsPage() {
                     </td>
                     <td className="px-4 py-3 text-right font-medium tabular-nums">{r.customers.toLocaleString("en-IN")}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.active.toLocaleString("en-IN")}</td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.oldCustomers.toLocaleString("en-IN")}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.newCustomers.toLocaleString("en-IN")}</td>
                     <td className="px-4 py-3 text-right tabular-nums"><Amount value={r.arc} /></td>
-                    <td className="px-4 py-3 text-right tabular-nums text-emerald-600"><Amount value={r.activeArc} /></td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground"><Amount value={r.oldArc} /></td>
+                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground"><Amount value={r.newArc} /></td>
                     <td className="px-4 py-3 text-right"><ChangeCell count={r.upgrade.count} amount={r.upgrade.amount} tone="text-emerald-600" /></td>
                     <td className="px-4 py-3 text-right"><ChangeCell count={r.downgrade.count} amount={r.downgrade.amount} tone="text-amber-600" /></td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.rateRevision.count || "—"}</td>
                     <td className="px-4 py-3 text-right"><ChangeCell count={r.disconnection.count} amount={r.disconnection.amount} tone="text-danger" /></td>
+                    <td className="px-4 py-3 text-right tabular-nums text-emerald-600"><Amount value={r.activeArc} /></td>
                     <td className="px-4 py-3 text-right"><ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" /></td>
                   </tr>
                 ))
@@ -166,11 +178,19 @@ export default function SamsPage() {
               <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Customers</div>
-                  <div className="font-medium tabular-nums">{r.customers.toLocaleString("en-IN")} <span className="text-[11px] text-muted-foreground">({r.active} active · {r.newCustomers} new)</span></div>
+                  <div className="font-medium tabular-nums">{r.customers.toLocaleString("en-IN")} <span className="text-[11px] text-muted-foreground">({r.oldCustomers} old · {r.newCustomers} new · {r.active} active)</span></div>
                 </div>
                 <div>
                   <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total ARC</div>
                   <div className="font-medium tabular-nums"><Amount value={r.arc} /> <span className="text-[11px] text-emerald-600">(<Amount value={r.activeArc} /> active)</span></div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Old ARC</div>
+                  <div className="font-medium tabular-nums"><Amount value={r.oldArc} /></div>
+                </div>
+                <div>
+                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">New ARC</div>
+                  <div className="font-medium tabular-nums"><Amount value={r.newArc} /></div>
                 </div>
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
