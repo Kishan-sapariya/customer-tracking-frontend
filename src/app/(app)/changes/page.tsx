@@ -201,6 +201,25 @@ function ChangesInner() {
         )}
       </div>
 
+      {summary && summary.count > 0 && (
+        <div className="mb-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface-muted/40 p-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total changes</div>
+            <div className="text-2xl font-semibold tabular-nums">{summary.count}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Net ARC impact</div>
+            <div className={cn("flex items-center justify-end gap-1 text-2xl font-semibold tabular-nums", summary.netArc >= 0 ? "text-emerald-600" : "text-danger")}>
+              {summary.netArc >= 0 ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+              <Amount value={Math.abs(summary.netArc)} />
+            </div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">
+              +<Amount value={summary.gained} /> gained · −<Amount value={summary.reduced} /> reduced · −<Amount value={summary.churned} /> churned
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Table (desktop) — scrolls internally with a sticky header */}
       <div className="hidden overflow-hidden rounded-xl border border-border bg-surface md:block">
         <div className="max-h-[70vh] overflow-auto">
@@ -315,25 +334,6 @@ function ChangesInner() {
           })
         )}
       </div>
-
-      {summary && summary.count > 0 && (
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface-muted/40 p-4">
-          <div>
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total changes</div>
-            <div className="text-2xl font-semibold tabular-nums">{summary.count}</div>
-          </div>
-          <div className="text-right">
-            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Net ARC impact</div>
-            <div className={cn("flex items-center justify-end gap-1 text-2xl font-semibold tabular-nums", summary.netArc >= 0 ? "text-emerald-600" : "text-danger")}>
-              {summary.netArc >= 0 ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
-              <Amount value={Math.abs(summary.netArc)} />
-            </div>
-            <div className="mt-0.5 text-[11px] text-muted-foreground">
-              +<Amount value={summary.gained} /> gained · −<Amount value={summary.reduced} /> reduced · −<Amount value={summary.churned} /> churned
-            </div>
-          </div>
-        </div>
-      )}
 
       {pagination && pagination.total > 0 && (
         <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
