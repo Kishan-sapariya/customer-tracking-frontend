@@ -40,6 +40,8 @@ function resolveRange(range: DateRange, from: string, to: string): { dateFrom?: 
   return {};
 }
 
+interface ChangesSummary { count: number; gained: number; reduced: number; churned: number; netArc: number }
+
 interface ChangeRow {
   id: string;
   action: Action;
@@ -121,6 +123,7 @@ function ChangesInner() {
   );
   const [items, setItems] = useState<ChangeRow[]>([]);
   const [pagination, setPagination] = useState<{ total: number; totalPages: number; page: number; pageSize: number } | null>(null);
+  const [summary, setSummary] = useState<ChangesSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState<ChangeRow | null>(null);
   const [deleting, setDeleting] = useState<ChangeRow | null>(null);
@@ -131,9 +134,13 @@ function ChangesInner() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiList<ChangeRow>("/changes", { query: { action: action || undefined, type: type || undefined, dateFrom, dateTo, page, pageSize } });
+      const res = await api<{ items: ChangeRow[]; pagination: typeof pagination; summary: ChangesSummary }>(
+        "/changes",
+        { query: { action: action || undefined, type: type || undefined, dateFrom, dateTo, page, pageSize } }
+      );
       setItems(res.items);
       setPagination(res.pagination);
+      setSummary(res.summary);
     } finally {
       setLoading(false);
     }
@@ -308,6 +315,25 @@ function ChangesInner() {
           })
         )}
       </div>
+
+      {summary && summary.count > 0 && (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-xl border border-border bg-surface-muted/40 p-4">
+          <div>
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total changes</div>
+            <div className="text-2xl font-semibold tabular-nums">{summary.count}</div>
+          </div>
+          <div className="text-right">
+            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Net ARC impact</div>
+            <div className={cn("flex items-center justify-end gap-1 text-2xl font-semibold tabular-nums", summary.netArc >= 0 ? "text-emerald-600" : "text-danger")}>
+              {summary.netArc >= 0 ? <ArrowUp className="h-5 w-5" /> : <ArrowDown className="h-5 w-5" />}
+              <Amount value={Math.abs(summary.netArc)} />
+            </div>
+            <div className="mt-0.5 text-[11px] text-muted-foreground">
+              +<Amount value={summary.gained} /> gained · −<Amount value={summary.reduced} /> reduced · −<Amount value={summary.churned} /> churned
+            </div>
+          </div>
+        </div>
+      )}
 
       {pagination && pagination.total > 0 && (
         <div className="mt-4 flex items-center justify-between text-xs text-muted-foreground">
