@@ -1,12 +1,14 @@
 "use client";
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { Search, UserCog, UserCheck, TrendingUp, ChevronRight } from "lucide-react";
+import { Search, UserCog, UserCheck, TrendingUp } from "lucide-react";
 import { PageHeader } from "@/components/PageHeader";
 import { Input, Spinner, EmptyState } from "@/components/ui";
 import { ExportButton } from "@/components/ExportButton";
+import { StatCard } from "@/components/StatCard";
 import { Amount } from "@/components/Amount";
 import { apiList } from "@/lib/api";
+import { compactInr } from "@/lib/format";
 import { cn } from "@/lib/utils";
 import type { ExportColumn } from "@/lib/excel";
 
@@ -95,9 +97,9 @@ export default function SamsPage() {
       {/* Totals */}
       {!loading && filtered.length > 0 && (
         <div className="mb-4 grid grid-cols-1 gap-3 sm:grid-cols-3">
-          <SummaryTile label="SAMs" value={String(filtered.length)} icon={UserCog} />
-          <SummaryTile label="Active Customers" value={totals.active.toLocaleString("en-IN")} icon={UserCheck} />
-          <SummaryTile label="Active ARC" value={<Amount value={totals.activeArc} />} icon={TrendingUp} />
+          <StatCard label="SAMs" value={filtered.length} icon={UserCog} tone="primary" accent="#3b82f6" />
+          <StatCard label="Active Customers" value={totals.active} icon={UserCheck} tone="success" accent="#22c55e" />
+          <StatCard label="Active ARC" value={compactInr(totals.activeArc)} icon={TrendingUp} tone="primary" accent="#06b6d4" />
         </div>
       )}
 
@@ -112,22 +114,17 @@ export default function SamsPage() {
                 <th className="px-4 py-3 text-right font-medium">Active</th>
                 <th className="px-4 py-3 text-right font-medium">Old</th>
                 <th className="px-4 py-3 text-right font-medium">New</th>
-                <th className="px-4 py-3 text-right font-medium">Total ARC</th>
-                <th className="px-4 py-3 text-right font-medium">Old ARC</th>
-                <th className="px-4 py-3 text-right font-medium">New ARC</th>
                 <th className="px-4 py-3 text-right font-medium">Upgrades</th>
                 <th className="px-4 py-3 text-right font-medium">Downgrades</th>
                 <th className="px-4 py-3 text-right font-medium">Rate Rev.</th>
                 <th className="px-4 py-3 text-right font-medium">Disconnections</th>
-                <th className="px-4 py-3 text-right font-medium">Active ARC</th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={14} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
+                <tr><td colSpan={9} className="py-16"><div className="flex justify-center"><Spinner /></div></td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={14}><EmptyState title="No SAMs found" hint="No customers have a SAM executive assigned yet." /></td></tr>
+                <tr><td colSpan={9}><EmptyState title="No SAMs found" hint="No customers have a SAM executive assigned yet." /></td></tr>
               ) : (
                 filtered.map((r) => (
                   <tr key={r.sam} onClick={() => go(r.sam)} className="cursor-pointer divide-x divide-border border-b border-border last:border-0 transition-colors hover:bg-surface-muted/40">
@@ -139,19 +136,14 @@ export default function SamsPage() {
                         <span className="font-semibold text-foreground">{r.sam}</span>
                       </div>
                     </td>
-                    <td className="px-4 py-3 text-right font-medium tabular-nums">{r.customers.toLocaleString("en-IN")}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.active.toLocaleString("en-IN")}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.oldCustomers.toLocaleString("en-IN")}</td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.newCustomers.toLocaleString("en-IN")}</td>
-                    <td className="px-4 py-3 text-right tabular-nums"><Amount value={r.arc} /></td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground"><Amount value={r.oldArc} /></td>
-                    <td className="px-4 py-3 text-right tabular-nums text-muted-foreground"><Amount value={r.newArc} /></td>
+                    <td className="px-4 py-3 text-right"><StatCell count={r.customers} amount={r.arc} /></td>
+                    <td className="px-4 py-3 text-right"><StatCell count={r.active} amount={r.activeArc} tone="text-emerald-600" /></td>
+                    <td className="px-4 py-3 text-right"><StatCell count={r.oldCustomers} amount={r.oldArc} /></td>
+                    <td className="px-4 py-3 text-right"><StatCell count={r.newCustomers} amount={r.newArc} /></td>
                     <td className="px-4 py-3 text-right"><ChangeCell count={r.upgrade.count} amount={r.upgrade.amount} tone="text-emerald-600" /></td>
                     <td className="px-4 py-3 text-right"><ChangeCell count={r.downgrade.count} amount={r.downgrade.amount} tone="text-amber-600" /></td>
                     <td className="px-4 py-3 text-right tabular-nums text-muted-foreground">{r.rateRevision.count || "—"}</td>
                     <td className="px-4 py-3 text-right"><ChangeCell count={r.disconnection.count} amount={r.disconnection.amount} tone="text-danger" /></td>
-                    <td className="px-4 py-3 text-right tabular-nums text-emerald-600"><Amount value={r.activeArc} /></td>
-                    <td className="px-4 py-3 text-right"><ChevronRight className="ml-auto h-4 w-4 text-muted-foreground" /></td>
                   </tr>
                 ))
               )}
@@ -175,23 +167,11 @@ export default function SamsPage() {
                 </span>
                 <span className="font-semibold text-foreground">{r.sam}</span>
               </div>
-              <div className="mt-3 grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Customers</div>
-                  <div className="font-medium tabular-nums">{r.customers.toLocaleString("en-IN")} <span className="text-[11px] text-muted-foreground">({r.oldCustomers} old · {r.newCustomers} new · {r.active} active)</span></div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Total ARC</div>
-                  <div className="font-medium tabular-nums"><Amount value={r.arc} /> <span className="text-[11px] text-emerald-600">(<Amount value={r.activeArc} /> active)</span></div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">Old ARC</div>
-                  <div className="font-medium tabular-nums"><Amount value={r.oldArc} /></div>
-                </div>
-                <div>
-                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground">New ARC</div>
-                  <div className="font-medium tabular-nums"><Amount value={r.newArc} /></div>
-                </div>
+              <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 text-sm">
+                <MobileStat label="Customers" count={r.customers} amount={r.arc} />
+                <MobileStat label="Active" count={r.active} amount={r.activeArc} tone="text-emerald-600" />
+                <MobileStat label="Old" count={r.oldCustomers} amount={r.oldArc} />
+                <MobileStat label="New" count={r.newCustomers} amount={r.newArc} />
               </div>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 border-t border-border pt-2 text-[11px] text-muted-foreground">
                 <span className="text-emerald-600">↑ {r.upgrade.count} · <Amount value={r.upgrade.amount} /></span>
@@ -207,6 +187,17 @@ export default function SamsPage() {
   );
 }
 
+// A stat cell: customer count on top, their ARC below (keeps count + ARC in one
+// column so the table stays compact).
+function StatCell({ count, amount, tone }: { count: number; amount: number; tone?: string }) {
+  return (
+    <div className="leading-tight">
+      <div className="font-medium tabular-nums">{count.toLocaleString("en-IN")}</div>
+      <div className={cn("text-[11px] tabular-nums", tone ?? "text-muted-foreground")}><Amount value={amount} /></div>
+    </div>
+  );
+}
+
 // A commercial-change cell: count on top, ARC impact below (— when zero).
 function ChangeCell({ count, amount, tone }: { count: number; amount: number; tone: string }) {
   if (!count) return <span className="text-muted-foreground">—</span>;
@@ -218,15 +209,14 @@ function ChangeCell({ count, amount, tone }: { count: number; amount: number; to
   );
 }
 
-function SummaryTile({ label, value, icon: Icon }: { label: string; value: React.ReactNode; icon: typeof UserCog }) {
+// Mobile equivalent: label with count · ARC on one line.
+function MobileStat({ label, count, amount, tone }: { label: string; count: number; amount: number; tone?: string }) {
   return (
-    <div className={cn("flex items-center gap-3 rounded-xl border border-border bg-surface p-4")}>
-      <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary-subtle text-primary">
-        <Icon className="h-4 w-4" />
-      </span>
-      <div>
-        <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
-        <div className="text-lg font-semibold tabular-nums">{value}</div>
+    <div>
+      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{label}</div>
+      <div className="font-medium tabular-nums">
+        {count.toLocaleString("en-IN")}
+        <span className={cn("text-[11px] font-normal", tone ?? "text-muted-foreground")}> · <Amount value={amount} /></span>
       </div>
     </div>
   );
